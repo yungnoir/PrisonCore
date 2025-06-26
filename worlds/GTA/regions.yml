@@ -1,0 +1,14 @@
+regions:
+- id: 076c7fb5-5c7b-455f-8d68-996b8bc69cfd
+  name: GTA_mine
+  pos1:
+    x: -18.0
+    y: -5.0
+    z: 40.0
+  pos2:
+    x: 12.0
+    y: -54.0
+    z: 10.0
+  flags:
+  - vertical
+  - break
