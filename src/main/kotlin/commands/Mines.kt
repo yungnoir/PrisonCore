@@ -1,30 +1,28 @@
 package twizzy.tech.commands
 
-import kotlinx.coroutines.runBlocking
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.minestom.server.entity.Player
-import net.minestom.server.instance.Instance
-import net.minestom.server.instance.InstanceContainer
 import net.minestom.server.instance.block.Block
 import revxrsal.commands.annotation.Command
 import revxrsal.commands.annotation.Description
 import revxrsal.commands.annotation.Optional
+import revxrsal.commands.annotation.Subcommand
 import twizzy.tech.game.MineManager
 import twizzy.tech.game.RegionManager
 import twizzy.tech.util.DurationParser
 import twizzy.tech.util.InstanceMap
 import twizzy.tech.util.Worlds
-import twizzy.tech.util.YamlFactory
 
-class Mine(
+@Command("mines")
+class Mines(
     private val regionManager: RegionManager,
     private val worlds: Worlds,
     private val mineManager: MineManager,
     private val instanceMap: InstanceMap
 ) {
 
-    @Command("mine create")
+    @Subcommand("create")
     suspend fun createMine(actor: Player) {
         // Start mine creation process using MineManager
         val success = mineManager.startMineCreation(actor)
@@ -37,45 +35,7 @@ class Mine(
         }
     }
 
-    @Command("mine go <player>")
-    fun goToMine(actor: Player, @Optional player: Player?) {
-        if (player == null) {
-            val instance = instanceMap.getInstance(actor)
-            val spawnPos = instanceMap.getSpawn(actor)
-            if (instance != null && spawnPos != null) {
-                actor.setInstance(instance, spawnPos)
-                actor.sendMessage(
-                    Component.text("Teleported to your mine!")
-                        .color(NamedTextColor.GREEN)
-                )
-            } else {
-                actor.sendMessage(
-                    Component.text("You do not have a personal mine instance. Use /mine create first.")
-                        .color(NamedTextColor.RED)
-                )
-            }
-        } else {
-            // Teleport to another player's mine
-            val targetInstance = instanceMap.getInstance(player)
-            val targetSpawn = instanceMap.getSpawn(player)
-
-            if (targetInstance != null && targetSpawn != null) {
-                actor.setInstance(targetInstance, targetSpawn)
-                actor.sendMessage(
-                    Component.text("Teleported to ${player.username}'s mine!")
-                        .color(NamedTextColor.GREEN)
-                )
-            } else {
-                actor.sendMessage(
-                    Component.text("${player.username} does not have a mine instance.")
-                        .color(NamedTextColor.RED)
-                )
-            }
-        }
-    }
-
-    @Command("mine setblocks")
-    @Description("Set the mine blocks using blocks from your hotbar")
+    @Subcommand("setblocks")
     suspend fun setMineBlocks(actor: Player) {
         val worldName = worlds.getWorldNameFromInstance(actor.instance)
         val mineName = "${worldName}_mine"
@@ -139,7 +99,7 @@ class Mine(
         }
     }
 
-    @Command("mine reset")
+    @Subcommand("reset")
     suspend fun resetMine(actor: Player) {
         val worldName = worlds.getWorldNameFromInstance(actor.instance)
         val mineName = "${worldName}_mine"
@@ -160,7 +120,7 @@ class Mine(
         }
     }
 
-    @Command("mine delete")
+    @Subcommand("delete")
     suspend fun deleteMine(actor: Player) {
         val worldName = worlds.getWorldNameFromInstance(actor.instance)
         val mineName = "${worldName}_mine"
@@ -181,7 +141,7 @@ class Mine(
         }
     }
 
-    @Command("mine interval <duration>")
+    @Subcommand("interval <duration>")
     suspend fun mineInterval(actor: Player, duration: String) {
         val worldName = worlds.getWorldNameFromInstance(actor.instance)
         val mineName = "${worldName}_mine"
@@ -198,7 +158,7 @@ class Mine(
         }
     }
 
-    @Command("mine info")
+    @Subcommand("info")
     suspend fun mineInfo(actor: Player) {
         val worldName = worlds.getWorldNameFromInstance(actor.instance)
         val mineName = "${worldName}_mine"
