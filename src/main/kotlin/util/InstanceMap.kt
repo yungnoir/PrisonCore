@@ -20,7 +20,7 @@ class InstanceMap(
     // Map of player UUID to their instance
     val playerInstances = mutableMapOf<UUID, Instance>()
     // Map of player UUID to their spawn position
-    private val playerSpawns = mutableMapOf<UUID, net.minestom.server.coordinate.Pos>()
+    private val playerSpawns = mutableMapOf<UUID, Pos>()
 
     /**
      * Creates a new instance for the player, copying the specified world (Polar, regions, mines)
@@ -127,6 +127,7 @@ class InstanceMap(
                     val mine = MineManager.Mine("${player.uuid}_mine", newRegionId, blocks, lastReset, resetInterval)
                     // Add to mineManager's map for this player's instance
                     mineManager.setMine(player.uuid.toString(), "${player.uuid}_mine", mine)
+                    mineManager.resetMine(player.uuid.toString(), "${player.uuid}_mine")
                 } catch (_: Exception) {}
             }
         }

@@ -8,6 +8,7 @@ import revxrsal.commands.annotation.Command
 import revxrsal.commands.annotation.Description
 import revxrsal.commands.annotation.Optional
 import revxrsal.commands.annotation.Subcommand
+import revxrsal.commands.minestom.annotation.CommandPermission
 import twizzy.tech.game.MineManager
 import twizzy.tech.game.RegionManager
 import twizzy.tech.util.DurationParser
@@ -15,6 +16,7 @@ import twizzy.tech.util.InstanceMap
 import twizzy.tech.util.Worlds
 
 @Command("mines")
+@CommandPermission("admin.mines")
 class Mines(
     private val regionManager: RegionManager,
     private val worlds: Worlds,

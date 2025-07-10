@@ -1,16 +1,25 @@
 package twizzy.tech.listeners
 
 import com.github.shynixn.mccoroutine.minestom.addSuspendingListener
+import com.github.shynixn.mccoroutine.minestom.scope
+import kotlinx.coroutines.launch
+import net.kyori.adventure.key.Key
+import net.kyori.adventure.sound.Sound
+import net.kyori.adventure.text.Component
 import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.Pos
 import net.minestom.server.coordinate.Vec
 import net.minestom.server.entity.GameMode
+import net.minestom.server.entity.Metadata.ItemStack
 import net.minestom.server.event.player.PlayerBlockBreakEvent
 import net.minestom.server.event.player.PlayerBlockPlaceEvent
+import net.minestom.server.item.ItemComponent
+import net.minestom.server.item.ItemStack
+import net.minestom.server.item.Material
 import net.minestom.server.network.packet.server.play.ParticlePacket
 import net.minestom.server.particle.Particle
-import twizzy.tech.game.PlayerData
 import twizzy.tech.game.RegionManager
+import twizzy.tech.player.PlayerData
 import twizzy.tech.util.Worlds
 
 class MapInteractions(private val minecraftServer: MinecraftServer, private val regionManager: RegionManager, private val worlds: Worlds) {
@@ -32,12 +41,36 @@ class MapInteractions(private val minecraftServer: MinecraftServer, private val 
             val canBreak = regions.any { it.hasFlag("break") }
 
             if (canBreak) {
+                // Get the block type before breaking
+                val blockState = player.instance.getBlock(blockPos)
+                val blockId = blockState.name()
 
-                // Allow the block to be broken - no particles needed for success
-                val data = PlayerData(player.uuid)
-                data.incrementBlocksBroken()
+                // Decrease durability
+                if (player.itemInMainHand.get(ItemComponent.UNBREAKABLE) == null && player.itemInMainHand.get(ItemComponent.TOOL) != null) {
+                    val durability = player.itemInMainHand.builder()
+                        .set(ItemComponent.DAMAGE, player.itemInMainHand.get(ItemComponent.DAMAGE)?.inc())
+                        .build()
+                    if (player.itemInMainHand.get(ItemComponent.DAMAGE) == player.itemInMainHand.get(ItemComponent.MAX_DAMAGE)) {
+                        player.itemInMainHand = ItemStack.of(Material.AIR)
+                        player.playSound(
+                            Sound.sound(
+                                Key.key("minecraft:entity.item.break"),
+                                Sound.Source.PLAYER,
+                                1.0f,
+                                1.0f
+                            )
+                        )
+                    } else {
+                        player.itemInMainHand = durability
+                    }
+                }
+                minecraftServer.scope.launch {
+                    // Increment blocks mined counter
+                    PlayerData.incrementBlocksMined(player.uuid, 1)
 
-                data.addBlockToBackpack(event.block.name(), 1)
+                    // Add the broken block to the player's backpack
+                    PlayerData.addToBackpack(player.uuid, blockId, 1)
+                }
 
             } else {
                 // Cancel the block break if no region has break permission

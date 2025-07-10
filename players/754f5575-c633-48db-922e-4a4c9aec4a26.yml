@@ -1,4 +1,6 @@
 balance: 0.0
-blocksBroken: 1291
+blocksBroken: 4137
 backpack:
-  minecraft:netherrack: 1291
+  minecraft:netherrack: 4137
+inventory: {
+  }

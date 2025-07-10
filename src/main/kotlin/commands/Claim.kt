@@ -13,11 +13,49 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
 import revxrsal.commands.annotation.Optional
+import revxrsal.commands.annotation.Subcommand
+import revxrsal.commands.minestom.annotation.CommandPermission
 import kotlin.collections.contains
 
+@Command("region")
+@CommandPermission("admin.region")
 class Claim(private val regionManager: RegionManager, private val worlds: Worlds) {
 
-    @Command("region create <name> <radius>")
+
+    @Command("region")
+    suspend fun regionUsage(actor: Player) {
+        actor.sendMessage(
+            Component.text("Region Commands:")
+                .color(NamedTextColor.GOLD)
+                .decorate(TextDecoration.BOLD)
+        )
+        actor.sendMessage(
+            Component.text("/region create <name> [radius] - Create a new region")
+                .color(NamedTextColor.YELLOW)
+        )
+        actor.sendMessage(
+            Component.text("/region flag <name> <flag> - Add or remove a flag from a region")
+                .color(NamedTextColor.YELLOW)
+        )
+        actor.sendMessage(
+            Component.text("/region info [name] - Show information about a region")
+                .color(NamedTextColor.YELLOW)
+        )
+        actor.sendMessage(
+            Component.text("/region remove [name] - Remove a region")
+                .color(NamedTextColor.YELLOW)
+        )
+        actor.sendMessage(
+            Component.text("/region list - List your regions")
+                .color(NamedTextColor.YELLOW)
+        )
+        actor.sendMessage(
+            Component.text("/region view - View nearby regions")
+                .color(NamedTextColor.YELLOW)
+        )
+    }
+
+    @Subcommand("create <name> <radius>")
     suspend fun regionClaim(actor: Player, name: String, @Optional radius: Int?) {
         // Use centralized method in RegionManager to start the claiming process
         if (radius == null) {
@@ -114,8 +152,8 @@ class Claim(private val regionManager: RegionManager, private val worlds: Worlds
             )
         }
     }
-    
-    @Command("region flag <name> <string>")
+
+    @Subcommand("flag <name> <string>")
     suspend fun regionFlag(actor: Player, name: String, string: String) {
         val worldName = worlds.getWorldNameFromInstance(actor.instance) ?: run {
             actor.sendMessage(Component.text("Cannot determine current world.").color(NamedTextColor.RED))
@@ -170,7 +208,7 @@ class Claim(private val regionManager: RegionManager, private val worlds: Worlds
         )
     }
 
-    @Command("region info <name>")
+    @Subcommand("info <name>")
     suspend fun regionInfo(actor: Player, @Optional name: String?) {
         val worldName = worlds.getWorldNameFromInstance(actor.instance) ?: run {
             actor.sendMessage(Component.text("Cannot determine current world.").color(NamedTextColor.RED))
@@ -257,7 +295,7 @@ class Claim(private val regionManager: RegionManager, private val worlds: Worlds
         )
     }
 
-    @Command("region remove <name>")
+    @Subcommand("remove <name>")
     suspend fun regionRemove(actor: Player, @Optional name: String?) {
         val worldName = worlds.getWorldNameFromInstance(actor.instance) ?: run {
             actor.sendMessage(Component.text("Cannot determine current world.").color(NamedTextColor.RED))
@@ -316,7 +354,7 @@ class Claim(private val regionManager: RegionManager, private val worlds: Worlds
         }
     }
 
-    @Command("region list")
+    @Subcommand("list")
     suspend fun regionList(actor: Player) {
         val regions = regionManager.getRegions(worlds.getWorldNameFromInstance(actor.instance))
 
@@ -338,7 +376,7 @@ class Claim(private val regionManager: RegionManager, private val worlds: Worlds
         }
     }
 
-    @Command("region view")
+    @Subcommand("view")
     suspend fun regionView(actor: Player) {
         val nearbyRegions = regionManager.getNearbyRegions(actor, 100.0) // Show regions within 100 blocks
 

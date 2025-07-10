@@ -7,11 +7,13 @@ import net.minestom.server.instance.Instance
 import revxrsal.commands.annotation.Command
 import revxrsal.commands.annotation.Optional
 import revxrsal.commands.annotation.Subcommand
+import revxrsal.commands.minestom.annotation.CommandPermission
 import twizzy.tech.util.Worlds
 import java.io.File
 import java.util.*
 
 @Command("world")
+@CommandPermission("admin.world")
 class World(private val worlds: Worlds) {
 
     @Command("world")
