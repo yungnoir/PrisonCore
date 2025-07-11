@@ -1,14 +1,14 @@
 package twizzy.tech.game.items.notes
 
-import twizzy.tech.game.items.Item
-import net.minestom.server.item.Material
-import net.minestom.server.item.ItemStack
 import net.kyori.adventure.text.Component
+import net.minestom.server.item.ItemStack
+import net.minestom.server.item.Material
 import net.minestom.server.tag.Tag
+import twizzy.tech.game.items.Item
 import twizzy.tech.util.CompactNotation
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.UUID
+import java.util.*
 
 /**
  * Represents a money note item with value, issuer, and issue date

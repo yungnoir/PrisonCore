@@ -1,7 +1,6 @@
 package twizzy.tech.game
 
 import com.github.shynixn.mccoroutine.minestom.scope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import net.kyori.adventure.text.Component

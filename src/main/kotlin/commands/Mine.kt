@@ -1,20 +1,25 @@
 package twizzy.tech.commands
 
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
 import net.minestom.server.coordinate.Pos
 import net.minestom.server.entity.Player
 import revxrsal.commands.annotation.Command
+import revxrsal.commands.annotation.Description
 import revxrsal.commands.annotation.Optional
 import revxrsal.commands.annotation.Subcommand
 import twizzy.tech.util.InstanceMap
+import twizzy.tech.util.YamlFactory
 
 @Command("mine")
 class Mine(private val instanceMap: InstanceMap) {
 
     @Command("mine")
-    fun mineUsage(actor: Player){
-        actor.sendMessage("/mine go <player> - Teleport to your mine or another player's mine")
+    @Description("Manage your personal mine")
+    fun mineUsage(actor: Player) {
+        val helpMessages = YamlFactory.getCommandHelp("mine")
+        helpMessages.forEach { message ->
+            actor.sendMessage(Component.text(message))
+        }
     }
 
     @Subcommand("go <player>")
@@ -31,32 +36,31 @@ class Mine(private val instanceMap: InstanceMap) {
                 }
             }
 
-            actor.sendMessage(
-                Component.text("Teleported to your mine!")
-                    .color(NamedTextColor.GREEN)
-            )
+            val message = YamlFactory.getMessage("commands.mine.success")
+            actor.sendMessage(Component.text(message))
         } else {
             // Teleport to another player's mine
             val targetInstance = instanceMap.getInstance(player)
             val targetSpawn = instanceMap.getSpawn(player)
 
             if (targetInstance != null && targetSpawn != null) {
-
                 if (actor.instance == targetInstance) {
                     actor.teleport(Pos(targetSpawn))
                 } else {
                     actor.setInstance(targetInstance, targetSpawn)
                 }
 
-                actor.sendMessage(
-                    Component.text("Teleported to ${player.username}'s mine!")
-                        .color(NamedTextColor.GREEN)
+                val message = YamlFactory.getMessage(
+                    "commands.mine.success_other",
+                    mapOf("player" to player.username)
                 )
+                actor.sendMessage(Component.text(message))
             } else {
-                actor.sendMessage(
-                    Component.text("${player.username} does not have a mine instance.")
-                        .color(NamedTextColor.RED)
+                val message = YamlFactory.getMessage(
+                    "commands.mine.no_instance",
+                    mapOf("player" to player.username)
                 )
+                actor.sendMessage(Component.text(message))
             }
         }
     }

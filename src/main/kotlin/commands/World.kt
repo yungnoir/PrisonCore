@@ -1,50 +1,46 @@
 package twizzy.tech.commands
 
 import net.minestom.server.command.CommandSender
-import net.minestom.server.coordinate.Pos
 import net.minestom.server.entity.Player
 import net.minestom.server.instance.Instance
 import revxrsal.commands.annotation.Command
+import revxrsal.commands.annotation.Description
 import revxrsal.commands.annotation.Optional
 import revxrsal.commands.annotation.Subcommand
 import revxrsal.commands.minestom.annotation.CommandPermission
 import twizzy.tech.util.Worlds
-import java.io.File
-import java.util.*
+import twizzy.tech.util.YamlFactory
 
 @Command("world")
 @CommandPermission("admin.world")
 class World(private val worlds: Worlds) {
 
     @Command("world")
+    @Description("Manage worlds on the server")
     suspend fun worldHelp(sender: CommandSender) {
-        sender.sendMessage("§6World Commands:")
-        sender.sendMessage("§e/world create <name> §7- Create a new world")
-        sender.sendMessage("§e/world delete <name> §7- Delete an existing world")
-        sender.sendMessage("§e/world setspawn <name> §7- Set spawn point of a world to your location")
-        sender.sendMessage("§e/world tp <name> §7- Teleport to a world")
-        sender.sendMessage("§e/world list §7- List all available worlds")
+        val helpMessages = YamlFactory.getCommandHelp("world")
+        helpMessages.forEach { sender.sendMessage(it) }
     }
 
     @Subcommand("create")
     suspend fun createWorld(sender: CommandSender, name: String) {
         // Validate world name
         if (!isValidWorldName(name)) {
-            sender.sendMessage("§cInvalid world name. Use only letters, numbers, and underscores.")
+            sender.sendMessage(YamlFactory.getMessage("commands.world.create.invalid_name"))
             return
         }
 
         // Check if world already exists
         if (worlds.worldExists(name)) {
-            sender.sendMessage("§cA world with that name already exists.")
+            sender.sendMessage(YamlFactory.getMessage("commands.world.create.already_exists"))
             return
         }
 
         try {
             worlds.createWorld(name)
-            sender.sendMessage("§aWorld '$name' has been created successfully.")
+            sender.sendMessage(YamlFactory.getMessage("commands.world.create.success", mapOf("name" to name)))
         } catch (e: Exception) {
-            sender.sendMessage("§cFailed to create world: ${e.message}")
+            sender.sendMessage(YamlFactory.getMessage("commands.world.create.failed", mapOf("error" to (e.message ?: "Unknown error"))))
         }
     }
 
@@ -52,21 +48,21 @@ class World(private val worlds: Worlds) {
     suspend fun deleteWorld(sender: CommandSender, name: String) {
         // Don't allow deleting the spawn world
         if (name.equals("spawn", ignoreCase = true)) {
-            sender.sendMessage("§cYou cannot delete the spawn world.")
+            sender.sendMessage(YamlFactory.getMessage("commands.world.delete.cannot_delete_spawn"))
             return
         }
 
         // Check if world exists
         if (!worlds.worldExists(name)) {
-            sender.sendMessage("§cWorld '$name' does not exist.")
+            sender.sendMessage(YamlFactory.getMessage("commands.world.delete.not_exists", mapOf("name" to name)))
             return
         }
 
         try {
             worlds.deleteWorld(name)
-            sender.sendMessage("§aWorld '$name' has been deleted.")
+            sender.sendMessage(YamlFactory.getMessage("commands.world.delete.success", mapOf("name" to name)))
         } catch (e: Exception) {
-            sender.sendMessage("§cFailed to delete world: ${e.message}")
+            sender.sendMessage(YamlFactory.getMessage("commands.world.delete.failed", mapOf("error" to (e.message ?: "Unknown error"))))
         }
     }
 
@@ -75,16 +71,16 @@ class World(private val worlds: Worlds) {
         val name = worlds.getWorldNameFromInstance(player.instance)
 
         if (name == null) {
-            player.sendMessage("§cCould not determine the world you're in.")
+            player.sendMessage(YamlFactory.getMessage("commands.world.setspawn.unknown_world"))
             return
         }
 
         try {
             val position = player.position
             worlds.setWorldSpawn(name, position)
-            player.sendMessage("§aSpawn point for world '$name' has been set to your location.")
+            player.sendMessage(YamlFactory.getMessage("commands.world.setspawn.success", mapOf("name" to name)))
         } catch (e: Exception) {
-            player.sendMessage("§cFailed to set spawn point: ${e.message}")
+            player.sendMessage(YamlFactory.getMessage("commands.world.setspawn.failed", mapOf("error" to (e.message ?: "Unknown error"))))
         }
     }
 
@@ -97,14 +93,14 @@ class World(private val worlds: Worlds) {
         if (worldName != null) {
             // User specified a world name
             if (!worlds.worldExists(worldName)) {
-                player.sendMessage("§cWorld '$worldName' does not exist.")
+                player.sendMessage(YamlFactory.getMessage("commands.world.info.not_exists", mapOf("name" to worldName)))
                 return
             }
 
             targetWorldName = worldName
             // Get the instance from the world name
             instance = worlds.getWorld(worldName) ?: run {
-                player.sendMessage("§cFailed to load world '$worldName'.")
+                player.sendMessage(YamlFactory.getMessage("commands.world.info.failed_load", mapOf("name" to worldName)))
                 return
             }
         } else {
@@ -113,7 +109,7 @@ class World(private val worlds: Worlds) {
             val currentWorldName = worlds.getWorldNameFromInstance(instance)
 
             if (currentWorldName == null) {
-                player.sendMessage("§cCould not determine the world you're in.")
+                player.sendMessage(YamlFactory.getMessage("commands.world.info.unknown_world"))
                 return
             }
 
@@ -123,15 +119,21 @@ class World(private val worlds: Worlds) {
         try {
             val worldInfo = worlds.getWorldInfo(targetWorldName)
 
-            player.sendMessage("§6§m---------------------§6[ §eWorld Info §6]§m---------------------")
-            player.sendMessage("§6World Name: §e$targetWorldName")
-            player.sendMessage("§6Spawn Location: §ex: ${worldInfo.spawnPoint.x}, y: ${worldInfo.spawnPoint.y}, z: ${worldInfo.spawnPoint.z}")
-            player.sendMessage("§6Polar File: §e${if (worldInfo.filepath.isEmpty()) "None" else worldInfo.filepath}")
-            player.sendMessage("§6Chunk Count: §e${instance.chunks.size}")
-            player.sendMessage("§6Players: §e${instance.players.size}")
-            player.sendMessage("§6§m------------------------------------------------------")
+            player.sendMessage(YamlFactory.getMessage("commands.world.info.header"))
+            player.sendMessage(YamlFactory.getMessage("commands.world.info.name", mapOf("name" to targetWorldName)))
+            player.sendMessage(YamlFactory.getMessage("commands.world.info.spawn", mapOf(
+                "x" to worldInfo.spawnPoint.x,
+                "y" to worldInfo.spawnPoint.y,
+                "z" to worldInfo.spawnPoint.z
+            )))
+            player.sendMessage(YamlFactory.getMessage("commands.world.info.filepath", mapOf(
+                "filepath" to if (worldInfo.filepath.isEmpty()) "None" else worldInfo.filepath
+            )))
+            player.sendMessage(YamlFactory.getMessage("commands.world.info.chunks", mapOf("count" to instance.chunks.size)))
+            player.sendMessage(YamlFactory.getMessage("commands.world.info.players", mapOf("count" to instance.players.size)))
+            player.sendMessage(YamlFactory.getMessage("commands.world.info.footer"))
         } catch (e: Exception) {
-            player.sendMessage("§cFailed to get world info: ${e.message}")
+            player.sendMessage(YamlFactory.getMessage("commands.world.info.failed", mapOf("error" to (e.message ?: "Unknown error"))))
         }
     }
 
@@ -139,15 +141,15 @@ class World(private val worlds: Worlds) {
     suspend fun teleportToWorld(player: Player, name: String) {
         // Check if world exists
         if (!worlds.worldExists(name)) {
-            player.sendMessage("§cWorld '$name' does not exist.")
+            player.sendMessage(YamlFactory.getMessage("commands.world.tp.not_exists", mapOf("name" to name)))
             return
         }
 
         try {
             worlds.teleportToWorld(player, name)
-            player.sendMessage("§aTeleported to world '$name'.")
+            player.sendMessage(YamlFactory.getMessage("commands.world.tp.success", mapOf("name" to name)))
         } catch (e: Exception) {
-            player.sendMessage("§cFailed to teleport: ${e.message}")
+            player.sendMessage(YamlFactory.getMessage("commands.world.tp.failed", mapOf("error" to (e.message ?: "Unknown error"))))
         }
     }
 
@@ -156,13 +158,13 @@ class World(private val worlds: Worlds) {
         val worldList = worlds.listWorlds()
 
         if (worldList.isEmpty()) {
-            sender.sendMessage("§cNo worlds found.")
+            sender.sendMessage(YamlFactory.getMessage("commands.world.list.empty"))
             return
         }
 
-        sender.sendMessage("§6Available worlds (${worldList.size}):")
+        sender.sendMessage(YamlFactory.getMessage("commands.world.list.header", mapOf("count" to worldList.size)))
         for (worldName in worldList) {
-            sender.sendMessage("§e- $worldName")
+            sender.sendMessage(YamlFactory.getMessage("commands.world.list.entry", mapOf("name" to worldName)))
         }
     }
 

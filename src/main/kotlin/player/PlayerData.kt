@@ -4,15 +4,14 @@ import net.kyori.adventure.nbt.BinaryTagIO
 import net.kyori.adventure.nbt.CompoundBinaryTag
 import net.minestom.server.inventory.PlayerInventory
 import net.minestom.server.item.ItemStack
-import net.minestom.server.item.Material
 import net.minestom.server.utils.mojang.MojangUtils
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 import org.bson.Document
-import java.io.File
 import twizzy.tech.util.YamlFactory
+import java.io.File
 import java.io.IOException
 import java.math.BigDecimal
+import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Represents a player's persistent data and provides caching functionality.

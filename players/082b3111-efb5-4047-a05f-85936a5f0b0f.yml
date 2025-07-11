@@ -1,12 +1,6 @@
 balance: 420.0
 blocksBroken: 3941
 backpack:
-  minecraft:netherrack: 3200
-  minecraft:deepslate: 127
-  minecraft:andesite: 134
-  minecraft:stone: 143
-  minecraft:diorite: 122
-  minecraft:coal_ore: 132
-  minecraft:iron_ore: 73
-inventory: {
-  }
+  minecraft:netherrack: 3094
+inventory:
+  '0': CgAAAwAFY291bnQAAAABCgAKY29tcG9uZW50cwgAFW1pbmVjcmFmdDpjdXN0b21fbmFtZQAUIsKnYkRpYW1vbmQgUGlja2F4ZSIBACRtaW5lY3JhZnQ6ZW5jaGFudG1lbnRfZ2xpbnRfb3ZlcnJpZGUBCgAVbWluZWNyYWZ0OmN1c3RvbV9kYXRhCAAIaXRlbV91aWQAJGQxMjdlZGIwLTk3ZmUtNGQ5Ni1iNTcyLWI0Yzk5NDJhZWIxYggACWl0ZW1fbmFtZQAPZGlhbW9uZF9waWNrYXhlAAMAEG1pbmVjcmFmdDpkYW1hZ2UAAAdsAwAUbWluZWNyYWZ0Om1heF9kYW1hZ2UAAAyZAAgAAmlkABltaW5lY3JhZnQ6ZGlhbW9uZF9waWNrYXhlAA==

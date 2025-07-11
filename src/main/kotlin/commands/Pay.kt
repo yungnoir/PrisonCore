@@ -1,16 +1,18 @@
 package twizzy.tech.commands
 
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
 import net.minestom.server.entity.Player
 import revxrsal.commands.annotation.Command
+import revxrsal.commands.annotation.Description
 import twizzy.tech.player.PlayerData
 import twizzy.tech.util.CompactNotation
+import twizzy.tech.util.YamlFactory
 import java.math.BigDecimal
 
 class Pay {
 
     @Command("pay <target> <amount>")
+    @Description("Transfer money to another player")
     suspend fun pay(actor: Player, target: String, amount: String) {
         // Parse amount to BigDecimal, supporting compact notation
         val amountValue = try {
@@ -23,12 +25,17 @@ class Pay {
             }
 
             if (decimal <= BigDecimal.ZERO) {
-                actor.sendMessage(Component.text("Amount must be greater than 0").color(NamedTextColor.RED))
+                val message = YamlFactory.getMessage("commands.pay.positive_only")
+                actor.sendMessage(Component.text(message))
                 return
             }
             decimal
         } catch (e: Exception) {
-            actor.sendMessage(Component.text("Invalid amount: $amount").color(NamedTextColor.RED))
+            val message = YamlFactory.getMessage(
+                "commands.pay.invalid_amount",
+                mapOf("amount" to amount)
+            )
+            actor.sendMessage(Component.text(message))
             return
         }
 
@@ -37,12 +44,17 @@ class Pay {
         val senderData = PlayerData.getFromCache(senderUuid)
 
         if (senderData == null) {
-            actor.sendMessage(Component.text("Failed to retrieve your player data").color(NamedTextColor.RED))
+            val message = YamlFactory.getMessage("commands.pay.data_error")
+            actor.sendMessage(Component.text(message))
             return
         }
 
         if (senderData.balance < amountValue) {
-            actor.sendMessage(Component.text("You don't have enough balance to transfer ${CompactNotation.format(amountValue)}").color(NamedTextColor.RED))
+            val message = YamlFactory.getMessage(
+                "commands.pay.insufficient",
+                mapOf("amount" to CompactNotation.format(amountValue))
+            )
+            actor.sendMessage(Component.text(message))
             return
         }
 
@@ -50,13 +62,18 @@ class Pay {
         val targetData = PlayerData.findFromCache(target)
 
         if (targetData == null) {
-            actor.sendMessage(Component.text("Player '$target' not found or hasn't played before").color(NamedTextColor.RED))
+            val message = YamlFactory.getMessage(
+                "commands.pay.not_found",
+                mapOf("target" to target)
+            )
+            actor.sendMessage(Component.text(message))
             return
         }
 
         // Don't allow paying yourself
         if (targetData.uuid == senderUuid) {
-            actor.sendMessage(Component.text("You cannot pay yourself").color(NamedTextColor.RED))
+            val message = YamlFactory.getMessage("commands.pay.self_pay")
+            actor.sendMessage(Component.text(message))
             return
         }
 
@@ -65,22 +82,20 @@ class Pay {
         targetData.balance = targetData.balance.add(amountValue)
 
         // Notify both players about the successful transaction
-        actor.sendMessage(
-            Component.text("You sent ")
-                .color(NamedTextColor.GREEN)
-                .append(Component.text(CompactNotation.format(amountValue)).color(NamedTextColor.GOLD))
-                .append(Component.text(" to ").color(NamedTextColor.GREEN))
-                .append(Component.text(target).color(NamedTextColor.GOLD))
+        val senderMessage = YamlFactory.getMessage(
+            "commands.pay.success",
+            mapOf("amount" to CompactNotation.format(amountValue), "target" to target)
         )
+        actor.sendMessage(Component.text(senderMessage))
 
         // Try to notify the target player if they're online
         val targetPlayer = actor.instance?.players?.find { it.username.equals(target, ignoreCase = true) }
-        targetPlayer?.sendMessage(
-            Component.text("You received ")
-                .color(NamedTextColor.GREEN)
-                .append(Component.text(CompactNotation.format(amountValue)).color(NamedTextColor.GOLD))
-                .append(Component.text(" from ").color(NamedTextColor.GREEN))
-                .append(Component.text(actor.username).color(NamedTextColor.GOLD))
-        )
+        targetPlayer?.let {
+            val receivedMessage = YamlFactory.getMessage(
+                "commands.pay.received",
+                mapOf("amount" to CompactNotation.format(amountValue), "sender" to actor.username)
+            )
+            it.sendMessage(Component.text(receivedMessage))
+        }
     }
 }

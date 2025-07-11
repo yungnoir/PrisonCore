@@ -4,10 +4,11 @@ import net.minestom.server.entity.Player
 import net.minestom.server.item.ItemComponent
 import net.minestom.server.item.Material
 import revxrsal.commands.annotation.Command
+import revxrsal.commands.annotation.Description
 import revxrsal.commands.annotation.Optional
 import revxrsal.commands.minestom.annotation.CommandPermission
 import twizzy.tech.game.items.Item
-import java.util.UUID
+import java.util.*
 
 @CommandPermission("command.give")
 class Give {
@@ -27,6 +28,7 @@ class Give {
     }
 
     @Command("give")
+    @Description("Give an item to a player")
     fun giveCommand(actor: Player, target: Player, itemName: String, @Optional amount: Int = 1) {
         if (amount <= 0) {
             actor.sendMessage("§cAmount must be greater than 0")
@@ -72,6 +74,7 @@ class Give {
     }
 
     @Command("iteminfo")
+    @Description("Inspect the item in your hand")
     fun itemInfoCommand(player: Player) {
         val itemInHand = player.itemInMainHand
         if (itemInHand.isAir) {

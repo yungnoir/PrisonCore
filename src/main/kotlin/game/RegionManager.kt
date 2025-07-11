@@ -13,16 +13,10 @@ import net.minestom.server.coordinate.Pos
 import net.minestom.server.coordinate.Vec
 import net.minestom.server.entity.Player
 import net.minestom.server.event.EventFilter
-import net.minestom.server.event.EventListener
 import net.minestom.server.event.EventNode
 import net.minestom.server.event.item.ItemDropEvent
-import net.minestom.server.event.player.PlayerBlockInteractEvent
-import net.minestom.server.event.player.PlayerHandAnimationEvent
-import net.minestom.server.event.player.PlayerMoveEvent
-import net.minestom.server.event.player.PlayerStartDiggingEvent
-import net.minestom.server.event.player.PlayerUseItemEvent
+import net.minestom.server.event.player.*
 import net.minestom.server.event.trait.PlayerEvent
-import net.minestom.server.instance.Instance
 import net.minestom.server.item.ItemStack
 import net.minestom.server.item.Material
 import net.minestom.server.network.packet.server.play.ParticlePacket
@@ -33,9 +27,6 @@ import twizzy.tech.util.Worlds
 import java.io.File
 import java.util.*
 import java.util.function.Predicate
-import kotlin.collections.set
-import kotlin.math.max
-import kotlin.math.min
 
 class RegionManager(private val worlds: Worlds, private val minecraftServer: MinecraftServer, private var mineManager: MineManager? = null) {
 

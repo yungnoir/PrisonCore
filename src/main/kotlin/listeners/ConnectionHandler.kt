@@ -1,22 +1,22 @@
 package twizzy.tech.listeners
 
 import com.github.shynixn.mccoroutine.minestom.addSuspendingListener
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
 import net.minestom.server.MinecraftServer
+import net.minestom.server.entity.Player
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent
 import net.minestom.server.event.player.PlayerDisconnectEvent
 import net.minestom.server.item.ItemStack
 import net.minestom.server.item.Material
+import twizzy.tech.isServerLoaded
+import twizzy.tech.player.PlayerData
+import twizzy.tech.util.InstanceMap
 import twizzy.tech.util.LettuceCache
 import twizzy.tech.util.MongoStream
-import twizzy.tech.player.PlayerData
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
-import kotlinx.coroutines.runBlocking
-import net.minestom.server.entity.Player
-import net.minestom.server.inventory.PlayerInventory
-import java.util.UUID
+import java.util.*
 
-class ConnectionHandler(minecraftServer: MinecraftServer) {
+class ConnectionHandler(minecraftServer: MinecraftServer, instanceMap: InstanceMap) {
 
     init {
         val lettuce = LettuceCache.getInstance()
@@ -24,6 +24,12 @@ class ConnectionHandler(minecraftServer: MinecraftServer) {
 
         MinecraftServer.getGlobalEventHandler().addSuspendingListener(minecraftServer,
             AsyncPlayerConfigurationEvent::class.java) { event ->
+
+            if (!isServerLoaded) {
+                event.player.kick(Component.text("Server is still loading, please wait...", NamedTextColor.RED))
+                return@addSuspendingListener
+            }
+
             val player = event.player
             val profileResult = lettuce.getProfile(player.uuid)
 
@@ -34,9 +40,24 @@ class ConnectionHandler(minecraftServer: MinecraftServer) {
 
             // Load backpack from YAML
             PlayerData.loadBackpack(player.uuid)
+
+            instanceMap.createInstance(player, "GTA")
+
+            // Give player a wooden pickaxe only if they don't have any pickaxe in their inventory
+            val hasPickaxe = (0 until player.inventory.size).any { slot ->
+                val item = player.inventory.getItemStack(slot)
+                !item.isAir && item.material().name().contains("pickaxe")
+            }
+
+            if (!hasPickaxe) {
+                player.inventory.addItemStack(ItemStack.of(Material.WOODEN_PICKAXE))
+            }
         }
 
         MinecraftServer.getGlobalEventHandler().addSuspendingListener(minecraftServer, PlayerDisconnectEvent::class.java) { event ->
+            if (!isServerLoaded) {
+                return@addSuspendingListener
+            }
             val player = event.player
 
             // Save inventory to YAML
@@ -115,8 +136,6 @@ class ConnectionHandler(minecraftServer: MinecraftServer) {
                 // Save to MongoDB
                 val mongoStream = MongoStream.getInstance()
                 mongoStream.savePlayerData(playerData)
-
-                println("Saved MongoDB data for $username: Balance=${playerData.balance}, Blocks Mined=${playerData.blocksMined}")
 
                 // Remove from cache
                 PlayerData.removeFromCache(uuid)

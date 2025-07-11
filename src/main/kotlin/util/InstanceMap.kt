@@ -3,14 +3,11 @@ package twizzy.tech.util
 import net.minestom.server.coordinate.Pos
 import net.minestom.server.entity.Player
 import net.minestom.server.instance.Instance
-import net.minestom.server.instance.InstanceContainer
 import net.minestom.server.instance.LightingChunk
-import twizzy.tech.util.Worlds
-import twizzy.tech.game.RegionManager
 import twizzy.tech.game.MineManager
+import twizzy.tech.game.RegionManager
 import java.io.File
-import java.nio.file.Files
-import java.util.UUID
+import java.util.*
 
 class InstanceMap(
     private val worlds: Worlds,

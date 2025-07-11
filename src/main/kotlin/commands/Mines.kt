@@ -1,12 +1,10 @@
 package twizzy.tech.commands
 
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
 import net.minestom.server.entity.Player
 import net.minestom.server.instance.block.Block
 import revxrsal.commands.annotation.Command
 import revxrsal.commands.annotation.Description
-import revxrsal.commands.annotation.Optional
 import revxrsal.commands.annotation.Subcommand
 import revxrsal.commands.minestom.annotation.CommandPermission
 import twizzy.tech.game.MineManager
@@ -14,9 +12,11 @@ import twizzy.tech.game.RegionManager
 import twizzy.tech.util.DurationParser
 import twizzy.tech.util.InstanceMap
 import twizzy.tech.util.Worlds
+import twizzy.tech.util.YamlFactory
 
 @Command("mines")
 @CommandPermission("admin.mines")
+@Description("Manage global mines on the server")
 class Mines(
     private val regionManager: RegionManager,
     private val worlds: Worlds,
@@ -24,16 +24,25 @@ class Mines(
     private val instanceMap: InstanceMap
 ) {
 
+    @Command("mines")
+    fun minesUsage(actor: Player) {
+        val helpMessages = YamlFactory.getCommandHelp("mines")
+        helpMessages.forEach { message ->
+            actor.sendMessage(Component.text(message))
+        }
+    }
+
     @Subcommand("create")
     suspend fun createMine(actor: Player) {
         // Start mine creation process using MineManager
         val success = mineManager.startMineCreation(actor)
 
-        if (!success) {
-            actor.sendMessage(
-                Component.text("Failed to start mine creation. A mine may already exist in this world.")
-                    .color(NamedTextColor.RED)
-            )
+        if (success) {
+            val message = YamlFactory.getMessage("commands.mines.create.success")
+            actor.sendMessage(Component.text(message))
+        } else {
+            val message = YamlFactory.getMessage("commands.mines.create.failed")
+            actor.sendMessage(Component.text(message))
         }
     }
 
@@ -45,10 +54,8 @@ class Mines(
         // First check if the mine exists
         val mine = mineManager.getMine(worldName, mineName)
         if (mine == null) {
-            actor.sendMessage(
-                Component.text("No mine found in this world. Create one first with /mine create")
-                    .color(NamedTextColor.RED)
-            )
+            val message = YamlFactory.getMessage("commands.mines.setblocks.no_mine")
+            actor.sendMessage(Component.text(message))
             return
         }
 
@@ -70,10 +77,8 @@ class Mines(
         }
 
         if (blockTypes.isEmpty()) {
-            actor.sendMessage(
-                Component.text("You need to have at least one valid block in your hotbar to set mine blocks.")
-                    .color(NamedTextColor.RED)
-            )
+            val message = YamlFactory.getMessage("commands.mines.setblocks.no_blocks")
+            actor.sendMessage(Component.text(message))
             return
         }
 
@@ -84,20 +89,14 @@ class Mines(
             // Reset the mine to apply the new blocks
             mineManager.resetMine(worldName, mineName)
 
-            actor.sendMessage(
-                Component.text("Mine blocks updated with blocks from your hotbar!")
-                    .color(NamedTextColor.GREEN)
-            )
+            val message = YamlFactory.getMessage("commands.mines.setblocks.success")
+            actor.sendMessage(Component.text(message))
 
-            actor.sendMessage(
-                Component.text("Use /mine info to see the list of blocks in your mine.")
-                    .color(NamedTextColor.YELLOW)
-            )
+            val usageMessage = YamlFactory.getMessage("commands.mines.setblocks.usage_info")
+            actor.sendMessage(Component.text(usageMessage))
         } else {
-            actor.sendMessage(
-                Component.text("Failed to update mine blocks.")
-                    .color(NamedTextColor.RED)
-            )
+            val message = YamlFactory.getMessage("commands.mines.setblocks.failed")
+            actor.sendMessage(Component.text(message))
         }
     }
 
@@ -110,15 +109,11 @@ class Mines(
         val success = mineManager.resetMine(worldName, mineName)
 
         if (success) {
-            actor.sendMessage(
-                Component.text("Mine reset successfully!")
-                    .color(NamedTextColor.GREEN)
-            )
+            val message = YamlFactory.getMessage("commands.mines.reset.success")
+            actor.sendMessage(Component.text(message))
         } else {
-            actor.sendMessage(
-                Component.text("No mine found in this world or failed to reset.")
-                    .color(NamedTextColor.RED)
-            )
+            val message = YamlFactory.getMessage("commands.mines.reset.failed")
+            actor.sendMessage(Component.text(message))
         }
     }
 
@@ -131,15 +126,11 @@ class Mines(
         val success = mineManager.deleteMine(worldName, mineName)
 
         if (success) {
-            actor.sendMessage(
-                Component.text("Mine deleted successfully!")
-                    .color(NamedTextColor.GREEN)
-            )
+            val message = YamlFactory.getMessage("commands.mines.delete.success")
+            actor.sendMessage(Component.text(message))
         } else {
-            actor.sendMessage(
-                Component.text("No mine found in this world.")
-                    .color(NamedTextColor.RED)
-            )
+            val message = YamlFactory.getMessage("commands.mines.delete.failed")
+            actor.sendMessage(Component.text(message))
         }
     }
 
@@ -148,15 +139,24 @@ class Mines(
         val worldName = worlds.getWorldNameFromInstance(actor.instance)
         val mineName = "${worldName}_mine"
         val seconds = DurationParser.parse(duration)
+
         if (seconds == null || seconds <= 0) {
-            actor.sendMessage(Component.text("Invalid interval! Use formats like 30s, 15m, 2h, etc.").color(NamedTextColor.RED))
+            val message = YamlFactory.getMessage("commands.mines.interval.invalid")
+            actor.sendMessage(Component.text(message))
             return
         }
+
         val success = mineManager.setMineInterval(worldName, mineName, seconds)
+
         if (success) {
-            actor.sendMessage(Component.text("Mine reset interval set to $duration.").color(NamedTextColor.GREEN))
+            val message = YamlFactory.getMessage(
+                "commands.mines.interval.success",
+                mapOf("duration" to duration)
+            )
+            actor.sendMessage(Component.text(message))
         } else {
-            actor.sendMessage(Component.text("No mine found in this world.").color(NamedTextColor.RED))
+            val message = YamlFactory.getMessage("commands.mines.interval.failed")
+            actor.sendMessage(Component.text(message))
         }
     }
 
@@ -169,55 +169,49 @@ class Mines(
         val mine = mineManager.getMine(worldName, mineName)
 
         if (mine == null) {
-            actor.sendMessage(
-                Component.text("No mine found in this world.")
-                    .color(NamedTextColor.RED)
-            )
+            val message = YamlFactory.getMessage("commands.mines.info.no_mine")
+            actor.sendMessage(Component.text(message))
             return
         }
 
         // Display mine information
-        actor.sendMessage(
-            Component.text("==== Mine Info ====")
-                .color(NamedTextColor.GOLD)
-        )
+        val headerMessage = YamlFactory.getMessage("commands.mines.info.header")
+        actor.sendMessage(Component.text(headerMessage))
 
-        actor.sendMessage(
-            Component.text("Name: ")
-                .color(NamedTextColor.YELLOW)
-                .append(Component.text(mine.name).color(NamedTextColor.WHITE))
+        val nameMessage = YamlFactory.getMessage(
+            "commands.mines.info.name",
+            mapOf("name" to mine.name)
         )
+        actor.sendMessage(Component.text(nameMessage))
 
         val interval = mine.resetInterval ?: 60 // Default to 60 seconds if not set
-        actor.sendMessage(
-            Component.text("Last reset (${DurationParser.format(interval) ?: "null"}): ")
-                .color(NamedTextColor.YELLOW)
-                .append(Component.text("${(System.currentTimeMillis() - mine.lastReset) / 1000} seconds ago").color(NamedTextColor.WHITE))
+        val lastResetMessage = YamlFactory.getMessage(
+            "commands.mines.info.last_reset",
+            mapOf(
+                "interval" to (DurationParser.format(interval) ?: "null"),
+                "time" to ((System.currentTimeMillis() - mine.lastReset) / 1000).toString()
+            )
         )
+        actor.sendMessage(Component.text(lastResetMessage))
 
-        actor.sendMessage(
-            Component.text("Blocks used: ")
-                .color(NamedTextColor.YELLOW)
-        )
+        val blocksHeaderMessage = YamlFactory.getMessage("commands.mines.info.blocks_header")
+        actor.sendMessage(Component.text(blocksHeaderMessage))
 
         if (mine.blocks.isEmpty()) {
-            actor.sendMessage(
-                Component.text("  - None (using STONE as default)")
-                    .color(NamedTextColor.WHITE)
-            )
+            val noBlocksMessage = YamlFactory.getMessage("commands.mines.info.no_blocks")
+            actor.sendMessage(Component.text(noBlocksMessage))
         } else {
             mine.blocks.forEach { block ->
-                actor.sendMessage(
-                    Component.text("  - ${block.block}")
-                        .color(NamedTextColor.WHITE)
+                val blockMessage = YamlFactory.getMessage(
+                    "commands.mines.info.block_entry",
+                    mapOf("block" to block.block)
                 )
+                actor.sendMessage(Component.text(blockMessage))
             }
         }
 
         // Display instructions for setting blocks
-        actor.sendMessage(
-            Component.text("To change the blocks, place them in your hotbar and use /mine setblocks")
-                .color(NamedTextColor.AQUA)
-        )
+        val instructionsMessage = YamlFactory.getMessage("commands.mines.info.instructions")
+        actor.sendMessage(Component.text(instructionsMessage))
     }
 }

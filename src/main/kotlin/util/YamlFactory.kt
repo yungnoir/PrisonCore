@@ -6,11 +6,9 @@ import java.io.File
 import java.io.FileReader
 import java.io.FileWriter
 import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
 
 /**
- * A utility class for managing YAML configuration files.
+ * A utility class for managing YAML configuration files and language files.
  */
 class YamlFactory {
     companion object {
@@ -21,6 +19,100 @@ class YamlFactory {
                 indent = 2
             }
             Yaml(options)
+        }
+
+        // Language configuration cache
+        private var languageConfig: Map<String, Any>? = null
+        private var languageFile: File? = null
+
+        /**
+         * Initializes the language system by loading the lang.yaml file.
+         * @param langFilePath The path to the language file (defaults to "src/main/resources/lang.yaml").
+         */
+        fun initializeLanguage(langFilePath: String = "src/main/resources/lang.yaml") {
+            languageFile = createConfigIfNotExists(langFilePath, "lang.yaml")
+            reloadLanguage()
+        }
+
+        /**
+         * Reloads the language configuration from the file.
+         */
+        fun reloadLanguage() {
+            languageFile?.let { file ->
+                languageConfig = loadConfig(file)
+            }
+        }
+
+        /**
+         * Gets a message from the language file.
+         * @param path The path to the message (dot notation, e.g., "commands.world.create.success").
+         * @param placeholders A map of placeholder names to their values.
+         * @return The formatted message or the path if not found.
+         */
+        fun getMessage(path: String, placeholders: Map<String, Any> = emptyMap()): String {
+            val config = languageConfig ?: return path
+            val message = getValue(config, path, path)
+
+            return if (message is String) {
+                formatMessage(message, placeholders)
+            } else {
+                path
+            }
+        }
+
+        /**
+         * Gets a list of messages from the language file.
+         * @param path The path to the message list (dot notation).
+         * @param placeholders A map of placeholder names to their values.
+         * @return The formatted message list or empty list if not found.
+         */
+        @Suppress("UNCHECKED_CAST")
+        fun getMessageList(path: String, placeholders: Map<String, Any> = emptyMap()): List<String> {
+            val config = languageConfig ?: return emptyList()
+            val messages = getValue(config, path, emptyList<String>())
+
+            return if (messages is List<*>) {
+                messages.filterIsInstance<String>().map { formatMessage(it, placeholders) }
+            } else {
+                emptyList()
+            }
+        }
+
+        /**
+         * Formats a message by replacing placeholders with their values and converting color codes.
+         * @param message The message template.
+         * @param placeholders A map of placeholder names to their values.
+         * @return The formatted message with color codes converted.
+         */
+        private fun formatMessage(message: String, placeholders: Map<String, Any>): String {
+            var formatted = message
+            // Replace placeholders
+            for ((key, value) in placeholders) {
+                formatted = formatted.replace("{$key}", value.toString())
+            }
+            // Convert & color codes to § format
+            formatted = formatted.replace("&", "§")
+            return formatted
+        }
+
+        /**
+         * Gets a formatted command help message.
+         * @param commandName The name of the command.
+         * @param placeholders Additional placeholders for the help message.
+         * @return The formatted help message with header and usage list.
+         */
+        fun getCommandHelp(commandName: String, placeholders: Map<String, Any> = emptyMap()): List<String> {
+            val helpMessages = mutableListOf<String>()
+
+            // Add header
+            val header = getMessage("commands.$commandName.help.header", placeholders)
+            helpMessages.add(header)
+
+            // Add usage lines
+            val usage = getMessageList("commands.$commandName.help.usage", placeholders)
+            helpMessages.addAll(usage)
+
+            return helpMessages
         }
 
         /**

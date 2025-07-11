@@ -12,12 +12,10 @@ import net.minestom.server.instance.block.Block
 import net.minestom.server.registry.DynamicRegistry
 import net.minestom.server.world.DimensionType
 import org.slf4j.LoggerFactory
-import twizzy.tech.game.MineManager
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.UUID
-import kotlin.io.path.exists
+import java.util.*
 
 class Worlds(private var instanceMap: InstanceMap? = null) {
     // Method to set RegionManager after construction (to resolve circular dependency)

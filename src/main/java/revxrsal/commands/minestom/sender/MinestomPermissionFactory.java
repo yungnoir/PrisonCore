@@ -1,12 +1,12 @@
 package revxrsal.commands.minestom.sender;
 
+import net.minestom.server.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import revxrsal.commands.Lamp;
 import revxrsal.commands.annotation.list.AnnotationList;
 import revxrsal.commands.minestom.actor.MinestomCommandActor;
 import revxrsal.commands.minestom.annotation.CommandPermission;
-import net.minestom.server.entity.Player;
 import twizzy.tech.player.Profile;
 
 public enum MinestomPermissionFactory implements revxrsal.commands.command.CommandPermission.Factory<MinestomCommandActor> {

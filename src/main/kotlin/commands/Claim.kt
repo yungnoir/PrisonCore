@@ -1,155 +1,100 @@
 package twizzy.tech.commands
 
-import net.minestom.server.coordinate.Pos
-import net.minestom.server.entity.Player
-import net.minestom.server.instance.Instance
-import revxrsal.commands.annotation.Command
-import revxrsal.commands.annotation.Default
-import revxrsal.commands.annotation.Description
-import revxrsal.commands.annotation.Usage
-import twizzy.tech.game.RegionManager
-import twizzy.tech.util.Worlds
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
+import net.minestom.server.coordinate.Pos
+import net.minestom.server.entity.Player
+import revxrsal.commands.annotation.Command
+import revxrsal.commands.annotation.Description
 import revxrsal.commands.annotation.Optional
 import revxrsal.commands.annotation.Subcommand
 import revxrsal.commands.minestom.annotation.CommandPermission
-import kotlin.collections.contains
+import twizzy.tech.game.RegionManager
+import twizzy.tech.util.Worlds
+import twizzy.tech.util.YamlFactory
 
 @Command("region")
 @CommandPermission("admin.region")
+@Description("Manage regions claims")
 class Claim(private val regionManager: RegionManager, private val worlds: Worlds) {
-
 
     @Command("region")
     suspend fun regionUsage(actor: Player) {
-        actor.sendMessage(
-            Component.text("Region Commands:")
-                .color(NamedTextColor.GOLD)
-                .decorate(TextDecoration.BOLD)
-        )
-        actor.sendMessage(
-            Component.text("/region create <name> [radius] - Create a new region")
-                .color(NamedTextColor.YELLOW)
-        )
-        actor.sendMessage(
-            Component.text("/region flag <name> <flag> - Add or remove a flag from a region")
-                .color(NamedTextColor.YELLOW)
-        )
-        actor.sendMessage(
-            Component.text("/region info [name] - Show information about a region")
-                .color(NamedTextColor.YELLOW)
-        )
-        actor.sendMessage(
-            Component.text("/region remove [name] - Remove a region")
-                .color(NamedTextColor.YELLOW)
-        )
-        actor.sendMessage(
-            Component.text("/region list - List your regions")
-                .color(NamedTextColor.YELLOW)
-        )
-        actor.sendMessage(
-            Component.text("/region view - View nearby regions")
-                .color(NamedTextColor.YELLOW)
-        )
+        val helpMessages = YamlFactory.getCommandHelp("region")
+        helpMessages.forEach { message ->
+            actor.sendMessage(Component.text(message))
+        }
     }
 
     @Subcommand("create <name> <radius>")
     suspend fun regionClaim(actor: Player, name: String, @Optional radius: Int?) {
-        // Use centralized method in RegionManager to start the claiming process
-        if (radius == null) {
-
-            if (regionManager.startRegionClaiming(actor, name)) {
-                // Claiming process started successfully
-                actor.sendMessage(
-                    Component.text("You are now creating region: ")
-                        .color(NamedTextColor.YELLOW)
-                        .append(Component.text(name).color(NamedTextColor.GREEN))
-                )
-                actor.sendMessage(
-                    Component.text("A selection wand has been added to your inventory.")
-                        .color(NamedTextColor.GRAY)
-                )
-                actor.sendMessage(
-                    Component.text("Left-click blocks to set position 1, Right-click blocks to set position 2")
-                        .color(NamedTextColor.GRAY)
-                )
-                actor.sendMessage(
-                    Component.text("Use '/region confirm' to save or '/region cancel' to cancel")
-                        .color(NamedTextColor.GRAY)
-                )
+        try {
+            // Use centralized method in RegionManager to start the claiming process
+            if (radius == null) {
+                if (regionManager.startRegionClaiming(actor, name)) {
+                    // Claiming process started successfully
+                    val message = YamlFactory.getMessage(
+                        "commands.region.create.success",
+                        mapOf("name" to name, "radius" to "selection")
+                    )
+                    actor.sendMessage(Component.text(message))
+                } else {
+                    // Region with this name already exists
+                    val message = YamlFactory.getMessage(
+                        "commands.region.create.already_exists",
+                        mapOf("name" to name)
+                    )
+                    actor.sendMessage(Component.text(message))
+                }
             } else {
-                // Region with this name already exists
-                actor.sendMessage(
-                    Component.text("A region with this name already exists.")
-                        .color(NamedTextColor.RED)
+                // Create a region with the specified radius around the player
+                val playerPos = actor.position
+
+                // Calculate the min and max positions based on the radius
+                val pos1 = Pos(
+                    playerPos.x() - radius,
+                    playerPos.y() - radius,
+                    playerPos.z() - radius
                 )
-            }
-        } else {
-            // Create a region with the specified radius around the player
-            val playerPos = actor.position
 
-            // Calculate the min and max positions based on the radius
-            val pos1 = Pos(
-                playerPos.x() - radius,
-                playerPos.y() - radius,
-                playerPos.z() - radius
-            )
-
-            val pos2 = Pos(
-                playerPos.x() + radius,
-                playerPos.y() + radius,
-                playerPos.z() + radius
-            )
-
-            // Get the world name
-            val worldName = worlds.getWorldNameFromInstance(actor.instance) ?: run {
-                actor.sendMessage(Component.text("Cannot determine current world.").color(NamedTextColor.RED))
-                return
-            }
-
-            // Check if a region with this name already exists
-            val existingRegion = regionManager.findRegionByName(worldName, name)
-            if (existingRegion != null) {
-                actor.sendMessage(
-                    Component.text("A region with this name already exists.")
-                        .color(NamedTextColor.RED)
+                val pos2 = Pos(
+                    playerPos.x() + radius,
+                    playerPos.y() + radius,
+                    playerPos.z() + radius
                 )
-                return
+
+                // Get the world name
+                val worldName = worlds.getWorldNameFromInstance(actor.instance) ?: run {
+                    actor.sendMessage(Component.text("Cannot determine current world.").color(NamedTextColor.RED))
+                    return
+                }
+
+                // Check if a region with this name already exists
+                val existingRegion = regionManager.findRegionByName(worldName, name)
+                if (existingRegion != null) {
+                    actor.sendMessage(
+                        Component.text("A region with this name already exists.")
+                            .color(NamedTextColor.RED)
+                    )
+                    return
+                }
+
+                // Create the region directly
+                val region = regionManager.createRegion(worldName, name, pos1, pos2)
+
+                val message = YamlFactory.getMessage(
+                    "commands.region.create.success",
+                    mapOf("name" to name, "radius" to radius.toString())
+                )
+                actor.sendMessage(Component.text(message))
             }
-
-            // Create the region directly
-            val region = regionManager.createRegion(worldName, name, pos1, pos2)
-
-            // Calculate volume for display
-            val volume = region.getVolume()
-            val (min, max) = region.getMinMaxPositions()
-
-            // Notify the player
-            actor.sendMessage(
-                Component.text("Region ").color(NamedTextColor.GREEN)
-                    .append(Component.text(name).color(NamedTextColor.GOLD))
-                    .append(Component.text(" has been created with radius ").color(NamedTextColor.GREEN))
-                    .append(Component.text(radius).color(NamedTextColor.GOLD))
-                    .append(Component.text("!").color(NamedTextColor.GREEN))
+        } catch (e: Exception) {
+            val message = YamlFactory.getMessage(
+                "commands.region.create.failed",
+                mapOf("error" to e.message.orEmpty())
             )
-
-            actor.sendMessage(
-                Component.text("Size: ").color(NamedTextColor.YELLOW)
-                    .append(Component.text("$volume blocks").color(NamedTextColor.AQUA))
-            )
-
-            actor.sendMessage(
-                Component.text("Bounds: ").color(NamedTextColor.YELLOW)
-                    .append(Component.text("(${min.x().toInt()}, ${min.y().toInt()}, ${min.z().toInt()}) to (${max.x().toInt()}, ${max.y().toInt()}, ${max.z().toInt()})").color(NamedTextColor.AQUA))
-            )
-
-            // Visualize the region for the player
-            regionManager.visualizeRegions(actor, listOf(region))
-            actor.sendMessage(
-                Component.text("Region has been visualized for 30 seconds.").color(NamedTextColor.GRAY)
-            )
+            actor.sendMessage(Component.text(message))
         }
     }
 

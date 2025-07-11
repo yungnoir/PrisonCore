@@ -1,4 +1,10 @@
 package twizzy.tech.game
 
-class Engine {
+import net.minestom.server.MinecraftServer
+
+class Engine(server: MinecraftServer) {
+
+    init {
+
+    }
 }

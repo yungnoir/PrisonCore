@@ -1,17 +1,20 @@
 package twizzy.tech.commands
 
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.TextComponent
 import net.kyori.adventure.text.event.HoverEvent
-import java.util.regex.Pattern
 import net.minestom.server.entity.Player
 import revxrsal.commands.annotation.Command
+import revxrsal.commands.annotation.Description
 import revxrsal.commands.annotation.Subcommand
+import revxrsal.commands.minestom.annotation.CommandPermission
 import twizzy.tech.game.ActivityTracker
 import java.text.ParseException
 import java.text.SimpleDateFormat
+import java.util.regex.Pattern
 
 @Command("activity")
+@CommandPermission("admin.activity")
+@Description("View the activity logger")
 class Activity {
 
     // Get ActivityTracker instance

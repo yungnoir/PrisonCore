@@ -1,20 +1,21 @@
 package twizzy.tech.commands
 
+import net.kyori.adventure.text.Component
 import net.minestom.server.entity.Player
+import net.minestom.server.item.ItemStack
 import revxrsal.commands.annotation.Command
 import revxrsal.commands.annotation.Description
 import twizzy.tech.game.items.notes.Money
 import twizzy.tech.player.PlayerData
 import twizzy.tech.util.CompactNotation
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
-import net.minestom.server.item.ItemStack
+import twizzy.tech.util.YamlFactory
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
 class Withdraw {
 
     @Command("withdraw <amount>")
+    @Description("Withdraw money from your balance into a check.")
     suspend fun withdraw(actor: Player, amount: String) {
         try {
             // Parse the amount using CompactNotation
@@ -25,7 +26,8 @@ class Withdraw {
 
             // Check if the amount is valid
             if (parsedAmount <= 0) {
-                actor.sendMessage(Component.text("Please enter a positive amount to withdraw", NamedTextColor.RED))
+                val message = YamlFactory.getMessage("commands.withdraw.positive_only")
+                actor.sendMessage(Component.text(message))
                 return
             }
 
@@ -35,16 +37,18 @@ class Withdraw {
             // Get player data and check balance
             val playerData = PlayerData.getFromCache(uuid)
             if (playerData == null) {
-                actor.sendMessage(Component.text("Failed to retrieve your player data", NamedTextColor.RED))
+                val message = YamlFactory.getMessage("commands.withdraw.data_error")
+                actor.sendMessage(Component.text(message))
                 return
             }
 
             // Check if player has enough balance
             if (playerData.balance < withdrawAmount) {
-                actor.sendMessage(
-                    Component.text("You don't have enough money. Your balance: $", NamedTextColor.RED)
-                        .append(Component.text(CompactNotation.format(playerData.balance.toDouble()), NamedTextColor.GOLD))
+                val message = YamlFactory.getMessage(
+                    "commands.withdraw.insufficient",
+                    mapOf("balance" to CompactNotation.format(playerData.balance.toDouble()))
                 )
+                actor.sendMessage(Component.text(message))
                 return
             }
 
@@ -60,7 +64,8 @@ class Withdraw {
 
             // Try to give the item to the player
             if (!canAddItemToInventory(actor, moneyItem)) {
-                actor.sendMessage(Component.text("Your inventory is full!", NamedTextColor.RED))
+                val message = YamlFactory.getMessage("commands.withdraw.inventory_full")
+                actor.sendMessage(Component.text(message))
                 return
             }
 
@@ -71,15 +76,18 @@ class Withdraw {
             actor.inventory.addItemStack(moneyItem)
 
             // Send success message
-            actor.sendMessage(
-                Component.text("Successfully withdrew ", NamedTextColor.GREEN)
-                    .append(Component.text("$${CompactNotation.format(parsedAmount)}", NamedTextColor.GOLD))
+            val message = YamlFactory.getMessage(
+                "commands.withdraw.success",
+                mapOf("amount" to CompactNotation.format(parsedAmount))
             )
+            actor.sendMessage(Component.text(message))
 
         } catch (e: IllegalArgumentException) {
-            actor.sendMessage(Component.text("Invalid amount format. Example formats: 1000, 1K, 1.5M", NamedTextColor.RED))
+            val message = YamlFactory.getMessage("commands.withdraw.invalid_amount")
+            actor.sendMessage(Component.text(message))
         } catch (e: Exception) {
-            actor.sendMessage(Component.text("An error occurred while processing your withdrawal", NamedTextColor.RED))
+            val message = YamlFactory.getMessage("commands.withdraw.error")
+            actor.sendMessage(Component.text(message))
             e.printStackTrace()
         }
     }

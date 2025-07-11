@@ -1,9 +1,7 @@
 package twizzy.tech
 
-import com.github.shynixn.mccoroutine.minestom.ShutdownStrategy
 import com.github.shynixn.mccoroutine.minestom.addSuspendingListener
 import com.github.shynixn.mccoroutine.minestom.launch
-import com.github.shynixn.mccoroutine.minestom.scope
 import io.github._4drian3d.signedvelocity.minestom.SignedVelocity
 import io.github.togar2.pvp.MinestomPvP
 import io.github.togar2.pvp.feature.CombatFeatures
@@ -12,22 +10,18 @@ import io.github.togar2.pvp.feature.provider.DifficultyProvider
 import io.github.togar2.pvp.utils.CombatVersion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import me.lucko.spark.minestom.SparkMinestom
 import net.minestom.server.MinecraftServer
-import net.minestom.server.entity.Player
 import net.minestom.server.entity.attribute.Attribute
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent
-import net.minestom.server.event.player.AsyncPlayerPreLoginEvent
 import net.minestom.server.event.player.PlayerSpawnEvent
-import net.minestom.server.item.ItemStack
-import net.minestom.server.item.Material
 import net.minestom.server.potion.Potion
 import net.minestom.server.potion.PotionEffect
 import revxrsal.commands.minestom.MinestomLamp
 import twizzy.tech.commands.*
+import twizzy.tech.game.Engine
 import twizzy.tech.game.MineManager
 import twizzy.tech.game.RegionManager
 import twizzy.tech.listeners.ChatHandler
@@ -37,15 +31,13 @@ import twizzy.tech.listeners.MapInteractions
 import twizzy.tech.player.PlayerData
 import twizzy.tech.player.Ranks
 import twizzy.tech.util.*
-import java.io.File
 import java.nio.file.Path
 
+var isServerLoaded = false
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 suspend fun main() {
 
-    val minecraftServer = MinecraftServer.init()
+    val server = MinecraftServer.init()
     val logger = MinecraftServer.LOGGER
 
 
@@ -60,71 +52,79 @@ suspend fun main() {
     println("[PrisonCore/main] Initializing startup on ${Thread.currentThread().name}/${Thread.currentThread().id}")
 
     // Switches into suspendable scope on startup.
-    minecraftServer.launch {
+    server.launch {
+        try {
+            // Create the database configuration file before initializing connections
+            val configFile = YamlFactory.createConfigIfNotExists("database.yml", "database.yml")
+            YamlFactory.initializeLanguage()
+            println("[PrisonCore/main] Successfully retrieved database credentials at: ${configFile.absolutePath}")
 
-        // Create the database configuration file before initializing connections
-        val configFile = YamlFactory.createConfigIfNotExists("database.yml", "database.yml")
-        println("[PrisonCore/main] Successfully retrieved database credentials at: ${configFile.absolutePath}")
-
-        // Now initialize the connections
-        val lettuce = LettuceCache.getInstance()
-        lettuce.init()
-        val mongoStream = MongoStream.getInstance()
-        mongoStream.init()
-
-        val ranks = Ranks.getInstance()
-        ranks.init()
-
-
-        println("[PrisonCore/main] MainThread 1 Thread:${Thread.currentThread().name}/${Thread.currentThread().id}")
-        delay(2000)
-        println("[PrisonCore/main] MainThread 2 Thread:${Thread.currentThread().name}/${Thread.currentThread().id}")
-
-        withContext(Dispatchers.IO) {
-            println("[PrisonCore/main] Simulating data load Thread:${Thread.currentThread().name}/${Thread.currentThread().id}")
-            Thread.sleep(500)
-        }
-        println("[PrisonCore/main] MainThread 3 Thread:${Thread.currentThread().name}/${Thread.currentThread().id}")
-
-
-        while (true) {
+            // Now initialize the connections
+            val lettuce = LettuceCache.getInstance()
+            lettuce.init()
             val mongoStream = MongoStream.getInstance()
-            val cachedPlayerData = PlayerData.getAllCachedData()
+            mongoStream.init()
 
-            var savedCount = 0
-            cachedPlayerData.forEach { playerData ->
-                try {
-                    // Save player data to MongoDB
-                    mongoStream.savePlayerData(playerData)
+            val ranks = Ranks.getInstance()
+            ranks.init()
 
-                    savedCount++
-                } catch (e: Exception) {
-                    println("[PrisonCore/main] Error saving player data for ${playerData.uuid}: ${e.message}")
+
+            println("[PrisonCore/main] MainThread 1 Thread:${Thread.currentThread().name}/${Thread.currentThread().id}")
+            delay(2000)
+            println("[PrisonCore/main] MainThread 2 Thread:${Thread.currentThread().name}/${Thread.currentThread().id}")
+
+            withContext(Dispatchers.IO) {
+                println("[PrisonCore/main] Simulating data load Thread:${Thread.currentThread().name}/${Thread.currentThread().id}")
+                Thread.sleep(500)
+            }
+            println("[PrisonCore/main] MainThread 3 Thread:${Thread.currentThread().name}/${Thread.currentThread().id}")
+
+            // Mark server as loaded after all initialization is complete
+            isServerLoaded = true
+            println("[PrisonCore/main] Server initialization complete - players can now join!")
+
+            // Continue with the periodic save loop
+            while (true) {
+                delay(10000 * 60)
+                val mongoStream = MongoStream.getInstance()
+                val cachedPlayerData = PlayerData.getAllCachedData()
+
+                var savedCount = 0
+                cachedPlayerData.forEach { playerData ->
+                    try {
+                        // Save player data to MongoDB
+                        mongoStream.savePlayerData(playerData)
+
+                        savedCount++
+                    } catch (e: Exception) {
+                        println("[PrisonCore/main] Error saving player data for ${playerData.uuid}: ${e.message}")
+                    }
+                }
+
+                val onlinePlayers = MinecraftServer.getConnectionManager().onlinePlayers
+                for (player in onlinePlayers) {
+                    PlayerData.saveInventory(player.uuid, player.inventory)
+                    PlayerData.saveBackpack(player.uuid)
+                }
+
+
+                if (savedCount > 0) {
+                    println("[PrisonCore/main] Successfully saved $savedCount/${cachedPlayerData.size} player data records")
                 }
             }
-
-            val onlinePlayers = MinecraftServer.getConnectionManager().onlinePlayers
-            for (player in onlinePlayers) {
-                PlayerData.saveInventory(player.uuid, player.inventory)
-                PlayerData.saveBackpack(player.uuid)
-            }
-
-
-            if (savedCount > 0) {
-                println("[PrisonCore/main] Successfully saved $savedCount/${cachedPlayerData.size} player data records")
-            }
-
-            delay(10000 * 60)
+        } catch (e: Exception) {
+            println("[PrisonCore/main] Error during server initialization: ${e.message}")
+            e.printStackTrace()
+            // Don't set isServerLoaded to true if initialization fails
         }
-
     }
 
     MinestomPvP.init()
 
     // Create the instance using our Worlds system
     val worldsManager = Worlds()
-    val regionManager = RegionManager(worldsManager, minecraftServer)
-    val mineManager = MineManager(worldsManager, minecraftServer, regionManager)
+    val regionManager = RegionManager(worldsManager, server)
+    val mineManager = MineManager(worldsManager, server, regionManager)
     regionManager.setMineManager(mineManager)
 
     val instanceMap = InstanceMap(worldsManager, regionManager, mineManager)
@@ -143,13 +143,6 @@ suspend fun main() {
         player.respawnPoint = worldsManager.getSpawnPoint()
     }
 
-    globalEventHandler.addSuspendingListener(minecraftServer, AsyncPlayerConfigurationEvent::class.java) { event ->
-        val player = event.getPlayer()
-        instanceMap.createInstance(player, "GTA")
-
-        player.inventory.addItemStack(ItemStack.of(Material.WOODEN_PICKAXE)) // Give player a wooden pickaxe
-    }
-
     globalEventHandler.addChild(
         CombatFeatures.getVanilla(CombatVersion.LEGACY, DifficultyProvider.DEFAULT)
             .remove(FeatureType.FALL)
@@ -157,12 +150,7 @@ suspend fun main() {
             .add(CombatFeatures.FAIR_RISING_FALLING_KNOCKBACK)
             .build().createNode());
 
-    globalEventHandler.addSuspendingListener(minecraftServer, AsyncPlayerPreLoginEvent::class.java) { event ->
-        val username = event.username
-//        playerconnect.retrieveProfile(username)
-    }
-
-    globalEventHandler.addSuspendingListener(minecraftServer, PlayerSpawnEvent::class.java) { event ->
+    globalEventHandler.addSuspendingListener(server, PlayerSpawnEvent::class.java) { event ->
         val player = event.getPlayer()
         MinestomPvP.setLegacyAttack(player, true)
 
@@ -171,7 +159,6 @@ suspend fun main() {
         player.permissionLevel
 
         player.addEffect(Potion(PotionEffect.HASTE, 1, -1))
-        player.getAttribute(Attribute.ARMOR).setBaseValue(20.0) // Set armor to 20
         player.getAttribute(Attribute.MINING_EFFICIENCY).setBaseValue(100.0) // Set mining speed to 10
         player.getAttribute(Attribute.BLOCK_BREAK_SPEED).setBaseValue(10.0) // Set breaking speed to 10
         player.getAttribute(Attribute.FALL_DAMAGE_MULTIPLIER).setBaseValue(0.0) // Disable fall damage
@@ -186,6 +173,7 @@ suspend fun main() {
     val lamp = MinestomLamp.builder()
         .build()
 
+    lamp.register(Shutdown())
     lamp.register(Gamemode())
     lamp.register(Clear())
     lamp.register(Teleport())
@@ -199,16 +187,19 @@ suspend fun main() {
     lamp.register(Give())
     lamp.register(Withdraw())
     lamp.register(Pay())
+    lamp.register(Fix())
     lamp.register(Activity())
+    lamp.register(Help())
 
-    MapInteractions(minecraftServer, regionManager, worldsManager)
-    ItemInteractions(minecraftServer, regionManager, worldsManager)
+    MapInteractions(server, regionManager, worldsManager)
+    ItemInteractions(server, regionManager, worldsManager)
 
-    ConnectionHandler(minecraftServer)
-    ChatHandler(minecraftServer)
+    ConnectionHandler(server, instanceMap)
+    ChatHandler(server)
+    Engine(server)
 
     SignedVelocity.initialize()
-    minecraftServer.start("0.0.0.0", 25567)
+    server.start("0.0.0.0", 25567)
 
 
 
@@ -254,4 +245,3 @@ suspend fun main() {
         println("[PrisonCore/main] Graceful shutdown has completed!")
     }
 }
-

@@ -39,6 +39,9 @@ dependencies {
     implementation("com.github.shynixn.mccoroutine:mccoroutine-minestom-api:2.22.0")
     implementation("com.github.shynixn.mccoroutine:mccoroutine-minestom-core:2.22.0")
 
+    // Kotlin Reflection
+    implementation("org.jetbrains.kotlin:kotlin-reflect:2.1.20")
+
     implementation("org.yaml:snakeyaml:2.0")
 
     // Window Libary for interfaces

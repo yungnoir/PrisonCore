@@ -1,6 +1,5 @@
 package twizzy.tech.listeners
 
-import com.github.shynixn.mccoroutine.minestom.addSuspendingListener
 import com.github.shynixn.mccoroutine.minestom.scope
 import kotlinx.coroutines.launch
 import net.kyori.adventure.key.Key
@@ -10,7 +9,6 @@ import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.Pos
 import net.minestom.server.coordinate.Vec
 import net.minestom.server.entity.GameMode
-import net.minestom.server.entity.Metadata.ItemStack
 import net.minestom.server.event.player.PlayerBlockBreakEvent
 import net.minestom.server.event.player.PlayerBlockPlaceEvent
 import net.minestom.server.item.ItemComponent
@@ -21,6 +19,7 @@ import net.minestom.server.particle.Particle
 import twizzy.tech.game.RegionManager
 import twizzy.tech.player.PlayerData
 import twizzy.tech.util.Worlds
+import twizzy.tech.util.YamlFactory
 
 class MapInteractions(private val minecraftServer: MinecraftServer, private val regionManager: RegionManager, private val worlds: Worlds) {
 
@@ -88,17 +87,18 @@ class MapInteractions(private val minecraftServer: MinecraftServer, private val 
 
                 // Send message about denied action
                 if (regions.isNotEmpty()) {
-                    player.sendMessage("You cannot break blocks in this region.")
+                    val message = YamlFactory.getMessage("commands.region.protection.cannot_break",)
+                    player.sendMessage(Component.text(message))
                 }
             }
         }
 
-        MinecraftServer.getGlobalEventHandler().addSuspendingListener(minecraftServer, PlayerBlockPlaceEvent::class.java) { event ->
+        MinecraftServer.getGlobalEventHandler().addListener(PlayerBlockPlaceEvent::class.java) { event ->
             val player = event.player
 
             // Always allow creative mode players to place blocks
             if (player.gameMode == GameMode.CREATIVE) {
-                return@addSuspendingListener
+                return@addListener
             }
 
             val blockPos = event.blockPosition
@@ -123,7 +123,8 @@ class MapInteractions(private val minecraftServer: MinecraftServer, private val 
 
                 // Send message about denied action
                 if (regions.isNotEmpty()) {
-                    player.sendMessage("You cannot place blocks in this region.")
+                    val message = YamlFactory.getMessage("commands.region.protection.cannot_place",)
+                    player.sendMessage(Component.text(message))
                 }
             }
             // If canPlace is true, the event will proceed normally (not cancelled) without particles

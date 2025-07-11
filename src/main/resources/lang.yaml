@@ -1,0 +1,299 @@
+# Language configuration for PrisonCore
+# All messages and command usage strings
+
+commands:
+  world:
+    help:
+      header: "&6World Commands:"
+      usage:
+        - "&e/world create <name> &7- Create a new world"
+        - "&e/world delete <name> &7- Delete an existing world"
+        - "&e/world setspawn <name> &7- Set spawn point of a world to your location"
+        - "&e/world tp <name> &7- Teleport to a world"
+        - "&e/world list &7- List all available worlds"
+        - "&e/world info [name] &7- Show information about a world"
+
+    create:
+      invalid_name: "&cInvalid world name. Use only letters, numbers, and underscores."
+      already_exists: "&cA world with that name already exists."
+      success: "&aWorld '{name}' has been created successfully."
+      failed: "&cFailed to create world: {error}"
+
+    delete:
+      cannot_delete_spawn: "&cYou cannot delete the spawn world."
+      not_exists: "&cWorld '{name}' does not exist."
+      success: "&aWorld '{name}' has been deleted."
+      failed: "&cFailed to delete world: {error}"
+
+    setspawn:
+      unknown_world: "&cCould not determine the world you're in."
+      success: "&aSpawn point for world '{name}' has been set to your location."
+      failed: "&cFailed to set spawn point: {error}"
+
+    info:
+      not_exists: "&cWorld '{name}' does not exist."
+      unknown_world: "&cCould not determine the world you're in."
+      failed_load: "&cFailed to load world '{name}'."
+      failed: "&cFailed to get world info: {error}"
+      header: "&6&m---------------------&6[ &eWorld Info &6]&m---------------------"
+      name: "&6World Name: &e{name}"
+      spawn: "&6Spawn Location: &ex: {x}, y: {y}, z: {z}"
+      filepath: "&6Polar File: &e{filepath}"
+      chunks: "&6Chunk Count: &e{count}"
+      players: "&6Players: &e{count}"
+      footer: "&6&m------------------------------------------------------"
+
+    tp:
+      not_exists: "&cWorld '{name}' does not exist."
+      success: "&aTeleported to world '{name}'."
+      failed: "&cFailed to teleport: {error}"
+
+    list:
+      empty: "&cNo worlds found."
+      header: "&6Available worlds ({count}):"
+      entry: "&e- {name}"
+
+  teleport:
+    help:
+      header: "&6Teleport Commands:"
+      usage:
+        - "&e/teleport <target> &7- Teleport to a player"
+        - "&e/tp <target> &7- Teleport to a player (alias)"
+        - "&e/tphere <target> &7- Teleport a player to you"
+        - "&e/teleport <target> <player> &7- Teleport a player to another player"
+        - "&e/tp <target> <player> &7- Teleport a player to another player (alias)"
+
+    success: "&aYou have teleported to &e{target}&a."
+    success_here: "&aYou teleported &e{target}&a to your location."
+    success_other: "&aYou teleported &e{target}&a to &e{destination}&a."
+    teleported_to_you: "&aYou have been teleported to &e{player}&a."
+    teleported_by: "&aYou have been teleported by &e{player}&a."
+
+  warps:
+    help:
+      header: "&6Warp Commands:"
+      usage:
+        - "&e/spawn &7- Teleport to spawn"
+        - "&e/warp <name> &7- Teleport to a warp"
+        - "&e/setwarp <name> &7- Set a warp at your location"
+        - "&e/delwarp <name> &7- Delete a warp"
+        - "&e/warps &7- List all available warps"
+
+    spawn:
+      success: "&aYou have been teleported to spawn."
+      failed: "&cFailed to teleport to spawn: {error}"
+
+    warp:
+      not_exists: "&cWarp '{name}' does not exist."
+      success: "&aYou have been teleported to warp '{name}'."
+      failed: "&cFailed to teleport to warp '{name}': {error}"
+
+    setwarp:
+      success: "&aWarp '{name}' has been set at your location."
+      already_exists: "&cWarp '{name}' already exists."
+      failed: "&cFailed to set warp '{name}': {error}"
+
+    delwarp:
+      not_exists: "&cWarp '{name}' does not exist."
+      success: "&aWarp '{name}' has been deleted."
+      failed: "&cFailed to delete warp '{name}': {error}"
+
+    list:
+      empty: "&cNo warps found."
+      header: "&6Available warps ({count}):"
+      entry: "&e- {name}"
+
+  region:
+    help:
+      header: "&6Region Commands:"
+      usage:
+        - "&e/region create <name> [radius] &7- Create a new region"
+        - "&e/region flag <name> <flag> &7- Add or remove a flag from a region"
+        - "&e/region info [name] &7- Show information about a region"
+        - "&e/region delete <name> &7- Delete a region"
+        - "&e/region list &7- List all regions"
+
+    create:
+      success: "&aRegion '{name}' created successfully with radius {radius}."
+      already_exists: "&cRegion '{name}' already exists."
+      failed: "&cFailed to create region: {error}"
+
+    flag:
+      success: "&aFlag '{flag}' {action} for region '{name}'."
+      not_exists: "&cRegion '{name}' does not exist."
+      invalid_flag: "&cInvalid flag '{flag}'."
+      failed: "&cFailed to modify flag: {error}"
+
+    info:
+      not_exists: "&cRegion '{name}' does not exist."
+      header: "&6&m---------------------&6[ &eRegion Info &6]&m---------------------"
+      name: "&6Region Name: &e{name}"
+      center: "&6Center: &ex: {x}, y: {y}, z: {z}"
+      radius: "&6Radius: &e{radius}"
+      flags: "&6Flags: &e{flags}"
+      footer: "&6&m------------------------------------------------------"
+
+    delete:
+      success: "&aRegion '{name}' deleted successfully."
+      not_exists: "&cRegion '{name}' does not exist."
+      failed: "&cFailed to delete region: {error}"
+
+    list:
+      empty: "&cNo regions found."
+      header: "&6Regions in this world ({count}):"
+      entry: "&e- {name}"
+
+    protection:
+      cannot_break: "&cYou cannot break blocks in this region."
+      cannot_place: "&cYou cannot place blocks in this region."
+
+  gamemode:
+    help:
+      header: "&6Gamemode Commands:"
+      usage:
+        - "&e/gamemode <mode> &7- Change your gamemode"
+        - "&e/gmc &7- Switch to creative mode"
+        - "&e/gms &7- Switch to survival mode"
+
+    success: "&aYour current game mode is &e{mode}&a."
+    success_other: "&aChanged {player}'s game mode to &e{mode}&a."
+
+  clear:
+    help:
+      header: "&6Clear Commands:"
+      usage:
+        - "&e/clear &7- Clear your inventory"
+        - "&e/clear <target> &7- Clear another player's inventory"
+
+    success: "&aYour inventory has been cleared."
+    success_other: "&a{target}'s inventory has been cleared."
+    success_notify: "&aYour inventory has been cleared by &e{player}&a."
+
+  economy:
+    help:
+      header: "&6Economy Commands:"
+      usage:
+        - "&e/eco <player> add <amount> &7- Add money to a player (admin)"
+        - "&e/eco <player> take <amount> &7- Take money from a player (admin)"
+        - "&e/eco <player> set <amount> &7- Set a player's balance (admin)"
+
+    add:
+      success: "&aAdded &f{amount} &ato {target}'s balance."
+      notify: "&aYour balance was increased by &f{amount}&a."
+
+    take:
+      success: "&aTook &f{amount} &afrom {target}."
+      notify: "&c{amount} was taken from your balance."
+
+    set:
+      success: "&aSet {target}'s balance to &f{amount}&a."
+      notify: "&aYour balance has been set to &f{amount}&a."
+
+    invalid_amount: "&cInvalid amount: {amount}"
+    positive_only: "&cAmount must be positive."
+    non_negative: "&cAmount cannot be negative."
+
+  balance:
+    help:
+      header: "&6Balance Commands:"
+      usage:
+        - "&e/balance &7- Check your balance"
+        - "&e/bal &7- Check your balance (alias)"
+        - "&e/balance <player> &7- Check another player's balance"
+
+    own: "&eBalance: &a${amount}"
+    other: "&e{player}'s Balance: &a${amount}"
+    not_found: "&cPlayer not found or has no balance."
+
+  pay:
+    help:
+      header: "&6Pay Commands:"
+      usage:
+        - "&e/pay <target> <amount> &7- Send money to another player"
+
+    success: "&aYou sent &f{amount} &ato &e{target}&a."
+    received: "&aYou received &f{amount} &afrom &e{sender}&a."
+    insufficient: "&cYou don't have enough balance to transfer {amount}."
+    invalid_amount: "&cInvalid amount: {amount}"
+    positive_only: "&cAmount must be greater than 0."
+    not_found: "&cPlayer '{target}' not found or hasn't played before."
+    self_pay: "&cYou cannot pay yourself."
+    data_error: "&cFailed to retrieve your player data."
+
+  withdraw:
+    help:
+      header: "&6Withdraw Commands:"
+      usage:
+        - "&e/withdraw <amount> &7- Withdraw money as a physical note"
+
+    success: "&aSuccessfully withdrew &f${amount}&a."
+    insufficient: "&cYou don't have enough money. Your balance: &f${balance}&c."
+    inventory_full: "&cYour inventory is full!"
+    invalid_amount: "&cInvalid amount format. Example formats: 1000, 1K, 1.5M"
+    positive_only: "&cPlease enter a positive amount to withdraw."
+    data_error: "&cFailed to retrieve your player data."
+    error: "&cAn error occurred while processing your withdrawal."
+
+  mine:
+    help:
+      header: "&6Mine Commands:"
+      usage:
+        - "&e/mine go &7- Teleport to your mine"
+        - "&e/mine go <player> &7- Teleport to another player's mine"
+
+    success: "&aTeleported to your mine!"
+    success_other: "&aTeleported to &e{player}&a's mine!"
+    no_instance: "&c{player} does not have a mine instance."
+
+  mines:
+    help:
+      header: "&6Mine Management Commands:"
+      usage:
+        - "&e/mines create &7- Create a mine in current world"
+        - "&e/mines setblocks &7- Set mine blocks from your hotbar"
+        - "&e/mines reset &7- Reset the mine"
+        - "&e/mines delete &7- Delete the mine"
+        - "&e/mines interval <duration> &7- Set mine reset interval"
+        - "&e/mines info &7- Show mine information"
+
+    create:
+      success: "&aMine creation started successfully!"
+      failed: "&cFailed to start mine creation. A mine may already exist in this world."
+
+    setblocks:
+      success: "&aMine blocks updated with blocks from your hotbar!"
+      usage_info: "&eUse /mines info to see the list of blocks in your mine."
+      no_mine: "&cNo mine found in this world. Create one first with /mines create"
+      no_blocks: "&cYou need to have at least one valid block in your hotbar to set mine blocks."
+      failed: "&cFailed to update mine blocks."
+
+    reset:
+      success: "&aMine reset successfully!"
+      failed: "&cNo mine found in this world or failed to reset."
+
+    delete:
+      success: "&aMine deleted successfully!"
+      failed: "&cNo mine found in this world."
+
+    interval:
+      success: "&aMine reset interval set to {duration}."
+      invalid: "&cInvalid interval! Use formats like 30s, 15m, 2h, etc."
+      failed: "&cNo mine found in this world."
+
+    info:
+      no_mine: "&cNo mine found in this world."
+      header: "&6==== Mine Info ===="
+      name: "&eName: &f{name}"
+      last_reset: "&eLast reset ({interval}): &f{time} seconds ago"
+      blocks_header: "&eBlocks used:"
+      block_entry: "&f  - {block}"
+      no_blocks: "&f  - None (using STONE as default)"
+      instructions: "&bTo change the blocks, place them in your hotbar and use /mines setblocks"
+
+# Common messages
+common:
+  no_permission: "&cYou don't have permission to use this command."
+  player_only: "&cThis command can only be used by players."
+  console_only: "&cThis command can only be used from console."
+  invalid_player: "&cPlayer '{name}' not found."
+  error: "&cAn error occurred: {error}"

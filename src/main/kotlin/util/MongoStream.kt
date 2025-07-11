@@ -3,25 +3,22 @@ package twizzy.tech.util
 import com.mongodb.ConnectionString
 import com.mongodb.MongoClientSettings
 import com.mongodb.MongoTimeoutException
+import com.mongodb.client.model.Filters
 import com.mongodb.reactivestreams.client.MongoClient
 import com.mongodb.reactivestreams.client.MongoClients
 import com.mongodb.reactivestreams.client.MongoDatabase
+import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrNull
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
 import org.bson.Document
 import org.yaml.snakeyaml.Yaml
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileNotFoundException
-import com.mongodb.client.model.Filters
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.reactive.asFlow
 import twizzy.tech.game.ActivityTracker
 import twizzy.tech.player.PlayerData
 import twizzy.tech.player.Ranks
-import java.util.UUID
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileNotFoundException
+import java.util.*
 
 class MongoStream private constructor() {
     private var client: MongoClient? = null
