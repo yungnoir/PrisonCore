@@ -5,6 +5,8 @@ import kotlinx.coroutines.launch
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.sound.Sound
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.title.Title
 import net.minestom.server.MinecraftServer
 import net.minestom.server.coordinate.Pos
 import net.minestom.server.coordinate.Vec
@@ -16,7 +18,11 @@ import net.minestom.server.item.ItemStack
 import net.minestom.server.item.Material
 import net.minestom.server.network.packet.server.play.ParticlePacket
 import net.minestom.server.particle.Particle
+import twizzy.tech.game.Engine
 import twizzy.tech.game.RegionManager
+import twizzy.tech.game.items.pickaxe.Pickaxe
+import twizzy.tech.game.items.pickaxe.boosters.Backpack
+import twizzy.tech.gameEngine
 import twizzy.tech.player.PlayerData
 import twizzy.tech.util.Worlds
 import twizzy.tech.util.YamlFactory
@@ -44,8 +50,10 @@ class MapInteractions(private val minecraftServer: MinecraftServer, private val 
                 val blockState = player.instance.getBlock(blockPos)
                 val blockId = blockState.name()
 
-                // Decrease durability
-                if (player.itemInMainHand.get(ItemComponent.UNBREAKABLE) == null && player.itemInMainHand.get(ItemComponent.TOOL) != null) {
+                val pickaxe = Pickaxe.fromItemStack(player.itemInMainHand)
+
+                // Always handle durability for non-pickaxe items or items that aren't unbreakable
+                if (pickaxe == null && player.itemInMainHand.get(ItemComponent.UNBREAKABLE) == null && player.itemInMainHand.get(ItemComponent.TOOL) != null) {
                     val durability = player.itemInMainHand.builder()
                         .set(ItemComponent.DAMAGE, player.itemInMainHand.get(ItemComponent.DAMAGE)?.inc())
                         .build()
@@ -62,13 +70,6 @@ class MapInteractions(private val minecraftServer: MinecraftServer, private val 
                     } else {
                         player.itemInMainHand = durability
                     }
-                }
-                minecraftServer.scope.launch {
-                    // Increment blocks mined counter
-                    PlayerData.incrementBlocksMined(player.uuid, 1)
-
-                    // Add the broken block to the player's backpack
-                    PlayerData.addToBackpack(player.uuid, blockId, 1)
                 }
 
             } else {

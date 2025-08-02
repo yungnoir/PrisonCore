@@ -1,11 +1,14 @@
 package twizzy.tech.player
 
+import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.runBlocking
 import net.kyori.adventure.nbt.BinaryTagIO
 import net.kyori.adventure.nbt.CompoundBinaryTag
 import net.minestom.server.inventory.PlayerInventory
 import net.minestom.server.item.ItemStack
 import net.minestom.server.utils.mojang.MojangUtils
 import org.bson.Document
+import twizzy.tech.util.MongoStream
 import twizzy.tech.util.YamlFactory
 import java.io.File
 import java.io.IOException
@@ -21,7 +24,10 @@ class PlayerData(
     var balance: BigDecimal = BigDecimal.ZERO,
     var blocksMined: Int = 0,
     val inventory: MutableMap<String, InventoryItem> = mutableMapOf(),
-    val backpack: MutableMap<String, Int> = mutableMapOf()
+    val backpack: MutableMap<String, Int> = mutableMapOf(),
+    var souls: BigDecimal = BigDecimal.ZERO, // New currency
+    var tokens: BigDecimal = BigDecimal.ZERO, // New currency
+    var rank: Int = 0,
 ) {
     /**
      * Represents an item in a player's inventory
@@ -41,24 +47,28 @@ class PlayerData(
             .append("_id", uuid.toString())
             .append("balance", balance)
             .append("blocksMined", blocksMined)
+            .append("souls", souls)
+            .append("tokens", tokens)
+            .append("rank", rank)
     }
 
     companion object {
         private val playerCache = ConcurrentHashMap<UUID, PlayerData>()
         private const val PLAYERS_DIR = "players"
+        private val mongo = MongoStream.getInstance()
 
         /**
          * Gets player data from the cache, or loads from MongoDB if not present.
          * @param uuid Player UUID
          * @return PlayerData if found in cache or MongoDB, null if not found in either
          */
-        suspend fun getFromCache(uuid: UUID): PlayerData? {
+        fun getFromCache(uuid: UUID): PlayerData? {
             val cached = playerCache[uuid]
             if (cached != null) return cached
             // Try to load from MongoDB
             return try {
                 val mongoStream = twizzy.tech.util.MongoStream.getInstance()
-                val document = mongoStream.getPlayerData(uuid)
+                val document = runBlocking { mongoStream.getPlayerData(uuid) }
                 val playerData = fromDocument(document)
                 saveToCache(playerData)
                 playerData
@@ -148,7 +158,28 @@ class PlayerData(
                 else -> BigDecimal.ZERO
             }
             val blocksMined = document.getInteger("blocksMined") ?: 0
-            return PlayerData(uuid, balance, blocksMined)
+            val soulsObj = document.get("souls")
+            val souls = when (soulsObj) {
+                is org.bson.types.Decimal128 -> soulsObj.bigDecimalValue()
+                is Double -> BigDecimal.valueOf(soulsObj)
+                is Int -> BigDecimal.valueOf(soulsObj.toLong())
+                is Long -> BigDecimal.valueOf(soulsObj)
+                is String -> soulsObj.toBigDecimalOrNull() ?: BigDecimal.ZERO
+                else -> BigDecimal.ZERO
+            }
+            val tokensObj = document.get("tokens")
+            val tokens = when (tokensObj) {
+                is org.bson.types.Decimal128 -> tokensObj.bigDecimalValue()
+                is Double -> BigDecimal.valueOf(tokensObj)
+                is Int -> BigDecimal.valueOf(tokensObj.toLong())
+                is Long -> BigDecimal.valueOf(tokensObj)
+                is String -> tokensObj.toBigDecimalOrNull() ?: BigDecimal.ZERO
+                else -> BigDecimal.ZERO
+            }
+
+            val rank = document.getInteger("rank") ?: 0
+
+            return PlayerData(uuid, balance, blocksMined, mutableMapOf(), mutableMapOf(), souls, tokens, rank)
         }
 
         /**
@@ -160,6 +191,8 @@ class PlayerData(
         suspend fun setBalance(uuid: UUID, amount: BigDecimal): Boolean {
             val playerData = getFromCache(uuid) ?: return false
             playerData.balance = amount
+            // Update scoreboard automatically
+            twizzy.tech.util.ComponentSidebar.updateScoreboardForPlayer(uuid)
             return true
         }
 
@@ -172,6 +205,8 @@ class PlayerData(
         suspend fun addBalance(uuid: UUID, amount: BigDecimal): Boolean {
             val playerData = getFromCache(uuid) ?: return false
             playerData.balance = playerData.balance.add(amount)
+            // Update scoreboard automatically
+            twizzy.tech.util.ComponentSidebar.updateScoreboardForPlayer(uuid)
             return true
         }
 
@@ -182,8 +217,16 @@ class PlayerData(
          * @return true if successful, false if player data not found
          */
         suspend fun incrementBlocksMined(uuid: UUID, amount: Int = 1): Boolean {
-            val playerData = getFromCache(uuid) ?: return false
+
+            val playerData = getFromCache(uuid)
+            if (playerData == null) {
+                return false
+            }
+
+            val oldBlocksMined = playerData.blocksMined
             playerData.blocksMined += amount
+            val newBlocksMined = playerData.blocksMined
+
             return true
         }
 
@@ -255,6 +298,8 @@ class PlayerData(
             val playerData = getFromCache(uuid) ?: return false
             val currentAmount = playerData.backpack.getOrDefault(itemId, 0)
             playerData.backpack[itemId] = currentAmount + amount
+            // Update scoreboard automatically
+            twizzy.tech.util.ComponentSidebar.updateScoreboardForPlayer(uuid)
             return true
         }
 
@@ -280,6 +325,8 @@ class PlayerData(
                 playerData.backpack.remove(itemId)
             }
 
+            // Update scoreboard automatically
+            twizzy.tech.util.ComponentSidebar.updateScoreboardForPlayer(uuid)
             return true
         }
 
@@ -298,6 +345,172 @@ class PlayerData(
          */
         suspend fun getBackpackAmount(uuid: UUID, itemId: String): Int =
             getFromCache(uuid)?.backpack?.getOrDefault(itemId, 0) ?: 0
+
+        // === TOKENS MANAGEMENT ===
+
+        /**
+         * Sets a player's tokens
+         * @param uuid Player's UUID
+         * @param amount The new tokens amount
+         * @return true if successful, false if player data not found
+         */
+        suspend fun setTokens(uuid: UUID, amount: BigDecimal): Boolean {
+            val playerData = getFromCache(uuid) ?: return false
+            playerData.tokens = amount
+            // Update scoreboard automatically
+            twizzy.tech.util.ComponentSidebar.updateScoreboardForPlayer(uuid)
+            return true
+        }
+
+        /**
+         * Adds to a player's tokens
+         * @param uuid Player's UUID
+         * @param amount The amount to add (can be negative to subtract)
+         * @return true if successful, false if player data not found
+         */
+        suspend fun addTokens(uuid: UUID, amount: BigDecimal): Boolean {
+            val playerData = getFromCache(uuid) ?: return false
+            playerData.tokens = playerData.tokens.add(amount)
+            // Update scoreboard automatically
+            twizzy.tech.util.ComponentSidebar.updateScoreboardForPlayer(uuid)
+            return true
+        }
+
+        /**
+         * Gets a player's current tokens
+         * @param uuid Player's UUID
+         * @return The player's tokens, or null if player data not found
+         */
+        suspend fun getTokens(uuid: UUID): BigDecimal? = getFromCache(uuid)?.tokens
+
+        // === SOULS MANAGEMENT ===
+
+        /**
+         * Sets a player's souls
+         * @param uuid Player's UUID
+         * @param amount The new souls amount
+         * @return true if successful, false if player data not found
+         */
+        suspend fun setSouls(uuid: UUID, amount: BigDecimal): Boolean {
+            val playerData = getFromCache(uuid) ?: return false
+            playerData.souls = amount
+            // Update scoreboard automatically
+            twizzy.tech.util.ComponentSidebar.updateScoreboardForPlayer(uuid)
+            return true
+        }
+
+        /**
+         * Adds to a player's souls
+         * @param uuid Player's UUID
+         * @param amount The amount to add (can be negative to subtract)
+         * @return true if successful, false if player data not found
+         */
+        suspend fun addSouls(uuid: UUID, amount: BigDecimal): Boolean {
+            val playerData = getFromCache(uuid) ?: return false
+            playerData.souls = playerData.souls.add(amount)
+            // Update scoreboard automatically
+            twizzy.tech.util.ComponentSidebar.updateScoreboardForPlayer(uuid)
+            return true
+        }
+
+        /**
+         * Gets a player's current souls
+         * @param uuid Player's UUID
+         * @return The player's souls, or null if player data not found
+         */
+        suspend fun getSouls(uuid: UUID): BigDecimal? = getFromCache(uuid)?.souls
+
+        /**
+         * Sells all items in a player's backpack and adds the value to their balance
+         * @param uuid Player's UUID
+         * @return SellResult containing success status, total value, items sold, and error message if any
+         */
+        suspend fun sellBackpack(uuid: UUID): SellResult {
+            val playerData = getFromCache(uuid) ?: return SellResult(
+                success = false,
+                totalValue = BigDecimal.ZERO,
+                itemsSold = 0,
+                errorMessage = "Unable to load your player data."
+            )
+
+            val backpack = playerData.backpack
+
+            if (backpack.isEmpty()) {
+                return SellResult(
+                    success = false,
+                    totalValue = BigDecimal.ZERO,
+                    itemsSold = 0,
+                    errorMessage = "Your backpack is empty - nothing to sell!"
+                )
+            }
+
+            // Calculate total sell value using the game engine
+            val totalValue = twizzy.tech.gameEngine.calculateTotalSellValue(backpack)
+
+            if (totalValue <= BigDecimal.ZERO) {
+                return SellResult(
+                    success = false,
+                    totalValue = BigDecimal.ZERO,
+                    itemsSold = 0,
+                    errorMessage = "No valuable items found in your backpack."
+                )
+            }
+
+            // Calculate total items being sold
+            val totalItems = backpack.values.sum()
+
+            // Create a backup of the backpack for rollback
+            val backpackBackup = backpack.toMap()
+
+            try {
+                // Add to player's balance
+                playerData.balance = playerData.balance.add(totalValue)
+
+                // Clear the backpack
+                backpack.clear()
+
+                // Save the updated data
+                val mongoStream = MongoStream.getInstance()
+                mongoStream.savePlayerData(playerData)
+                saveBackpack(uuid)
+
+                // Update scoreboard automatically (balance and backpack count changed)
+                twizzy.tech.util.ComponentSidebar.updateScoreboardForPlayer(uuid)
+
+                return SellResult(
+                    success = true,
+                    totalValue = totalValue,
+                    itemsSold = totalItems,
+                    newBalance = playerData.balance
+                )
+
+            } catch (e: Exception) {
+                // Rollback the changes if saving fails
+                playerData.balance = playerData.balance.subtract(totalValue)
+                backpack.clear()
+                backpack.putAll(backpackBackup)
+
+                return SellResult(
+                    success = false,
+                    totalValue = BigDecimal.ZERO,
+                    itemsSold = 0,
+                    errorMessage = "Failed to save your data after selling. Transaction cancelled.",
+                    exception = e
+                )
+            }
+        }
+
+        /**
+         * Result of a backpack sell operation
+         */
+        data class SellResult(
+            val success: Boolean,
+            val totalValue: BigDecimal,
+            val itemsSold: Int,
+            val errorMessage: String? = null,
+            val newBalance: BigDecimal? = null,
+            val exception: Exception? = null
+        )
 
         /**
          * Saves player inventory data to YAML file directly from a PlayerInventory
@@ -518,6 +731,109 @@ class PlayerData(
          */
         fun getAllCachedData(): List<PlayerData> {
             return playerCache.values.toList()
+        }
+
+        enum class LeaderboardType { Balance, Souls, Tokens, Rank, Blocks }
+
+        // Leaderboard cache and timestamps (moved out of nested companion object)
+        private const val LEADERBOARD_SIZE = 10
+        private const val CACHE_DURATION_MS = 10 * 60 * 1000L // 10 minutes
+        private val leaderboardCache = mutableMapOf<LeaderboardType, List<Pair<UUID, Number>>>()
+        private val leaderboardTimestamps = mutableMapOf<LeaderboardType, Long>()
+
+        // --- Leaderboard config helpers ---
+        private fun getLeaderboardConfig(): Map<String, Any> {
+            val config = YamlFactory.loadConfig(File("game/config.yml"))
+            return config["leaderboard"] as? Map<String, Any> ?: emptyMap()
+        }
+        private fun getLeaderboardRefreshIntervalMs(): Long {
+            val intervalStr = getLeaderboardConfig()["refreshInterval"]?.toString() ?: "10m"
+            val seconds = twizzy.tech.util.DurationParser.parse(intervalStr) ?: 600L
+            return seconds * 1000L
+        }
+        fun getLeaderboardPerPage(): Int = (getLeaderboardConfig()["perPage"] as? Int) ?: 10
+        fun getLeaderboardMaxPages(): Int = (getLeaderboardConfig()["maxPages"] as? Int) ?: 10
+
+        /**
+         * Refreshes the leaderboard cache and timestamp for the specified type.
+         */
+        private suspend fun refreshLeaderboard(type: LeaderboardType) {
+
+            // Upload the current cached player data to MongoDB
+            getAllCachedData().forEach { playerData ->
+                mongo.savePlayerData(playerData)
+            }
+
+            val perPage = getLeaderboardPerPage()
+            val maxPages = getLeaderboardMaxPages()
+            val field = when (type) {
+                LeaderboardType.Balance -> "balance"
+                LeaderboardType.Souls -> "souls"
+                LeaderboardType.Tokens -> "tokens"
+                LeaderboardType.Rank -> "rank"
+                LeaderboardType.Blocks -> "blocksMined"
+            }
+            val collection = mongo.getPlayersCollection()
+            val leaderboard = mutableListOf<Pair<UUID, Number>>()
+            try {
+                collection.find()
+                    .sort(Document(field, -1))
+                    .limit(perPage * maxPages)
+                    .asFlow()
+                    .collect { doc ->
+                        val id = doc.getString("_id")
+                        val value = doc.get(field)
+                        val uuid = try { UUID.fromString(id) } catch (_: Exception) { null }
+                        if (uuid != null && value is Number) {
+                            leaderboard.add(uuid to value)
+                        }
+                    }
+            } catch (e: Exception) {
+                println("[PrisonCore/Leaderboard] Failed to refresh leaderboard: "+e.message)
+            }
+            leaderboardCache[type] = leaderboard
+            leaderboardTimestamps[type] = System.currentTimeMillis()
+        }
+
+        /**
+         * Gets the leaderboard for the specified type, using cache if fresh.
+         * @param type The leaderboard type
+         * @param page The page number (1-based)
+         * @return List of pairs (UUID, value) sorted descending for the page
+         */
+        suspend fun getLeaderboard(type: LeaderboardType, page: Int = 1): List<Pair<UUID, Number>> {
+            val now = System.currentTimeMillis()
+            val refreshMs = getLeaderboardRefreshIntervalMs()
+            val perPage = getLeaderboardPerPage()
+            val maxPages = getLeaderboardMaxPages()
+            val lastRefresh = leaderboardTimestamps[type] ?: 0L
+            if (now - lastRefresh >= refreshMs || leaderboardCache[type] == null) {
+                refreshLeaderboard(type)
+            }
+            val cached = leaderboardCache[type] ?: emptyList()
+            val safePage = page.coerceIn(1, maxPages)
+            val from = (safePage - 1) * perPage
+            val to = (from + perPage).coerceAtMost(cached.size)
+            return if (from < to) cached.subList(from, to) else emptyList()
+        }
+
+        /**
+         * Forces a refresh of the specified leaderboard type, ignoring the cache.
+         */
+        suspend fun forceRefreshLeaderboard(type: LeaderboardType) {
+            refreshLeaderboard(type)
+        }
+
+        /**
+         * Returns milliseconds until the next refresh for the given leaderboard type.
+         * Returns 0 if the cache is expired or never set.
+         */
+        fun getNextLeaderboardRefresh(type: LeaderboardType): Long {
+            val refreshMs = getLeaderboardRefreshIntervalMs()
+            val lastRefresh = leaderboardTimestamps[type] ?: 0L
+            val now = System.currentTimeMillis()
+            val nextRefresh = (lastRefresh + refreshMs) - now
+            return nextRefresh.coerceAtLeast(0)
         }
     }
 }

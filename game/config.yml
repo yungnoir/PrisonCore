@@ -1,0 +1,108 @@
+# Game Configuration File
+# This file contains configuration options for various game mechanics
+
+booster:
+  experience:
+    item: "EXPERIENCE_BOTTLE" # Item to display the booster
+    display: "§aExperience Booster" # Display name for the booster
+    lore:
+      - "§7Boosts experience gain by §a%multiplier%§7x for §a%duration%"
+      - "§7Obtained from: §a%source%"
+
+
+mining:
+  summaryIntervalSeconds: 30
+
+pickaxe:
+  # Base experience required for level 1 to level 2
+  levelExperience: 500
+
+  # Percentage increase in experience requirement per level (0-100)
+  # 0 = constant 500 XP per level (current behavior)
+  # 1 = 1% increase per level (500, 505, 510.05, etc.)
+  # 10 = 10% increase per level (500, 550, 605, etc.)
+  experienceIncrement: 10
+
+  # Maximum level cap to prevent infinite calculations and performance issues
+  # Players cannot exceed this level regardless of experience gained
+  maxLevel: 1000
+
+  # Maximum booster multiplier cap to prevent server timeouts and overflow
+  # Any booster multiplier above this value will be automatically capped
+  maxBoosterMultiplier: 100
+
+  tokens:
+    baseTokens: 10 # Base tokens awarded for mining
+    findChance: 0.05 # 5% chance to find tokens while mining
+    chanceIncrease: 0.01 # 1% increase per level
+
+  enchants:
+    token:
+      Speed:
+        display: "§bSpeed"
+        item: "SUGAR"
+        pickaxeLevel: 1 # Minimum pickaxe level required to apply this enchant
+        maxLevel: 10
+        basePrice: 1000
+        priceIncrease: 5.0
+
+      Haste:
+        display: "§eHaste"
+        item: "GOLDEN_PICKAXE"
+        pickaxeLevel: 1 # Minimum pickaxe level required to apply this enchant
+        maxLevel: 5
+        basePrice: 1000
+        priceIncrease: 5.0
+
+      Jackhammer:
+        # Display name for the enchant
+        display: "§bJackhammer"
+
+        # Item used to represent the enchant
+        item: "GUNPOWDER"
+
+        # Minimum pickaxe level required to apply this enchant
+        pickaxeLevel: 5
+
+        # Max Level for the enchant
+        maxLevel: 100
+
+        # Base chance of triggering the enchant at level 1
+        basePrice: 10000
+        # Price percentage increase per level
+        priceIncrease: 10.0
+        # Base percentage chance of triggering the enchant at level 1
+        basePercentage: 0.15
+        # Percentage increase per level
+        percentageIncrease: 0.03
+
+      Drill:
+        display: "§6Drill"
+        item: "HOPPER"
+        pickaxeLevel: 3
+        maxLevel: 100
+        basePrice: 10000
+        priceIncrease: 10.0
+        basePercentage: 0.15
+        percentageIncrease: 0.03
+    soul:
+     TokenGreed:
+        display: "§cToken Greed"
+        item: "MAGMA_CREAM"
+        pickaxeLevel: 1 # Minimum pickaxe level required to apply this enchant
+        maxLevel: 200
+        basePrice: 1000
+        priceIncrease: 5.0
+
+        basePercentage: 0.05 # Percent to increase token gain
+        percentageIncrease: 0.01 # Percent to increase token gain per level
+
+ranks:
+  basePrice: 10000
+  priceIncrease: 15.0
+  maxRank: 100
+
+leaderboard:
+  refreshInterval: "2m"  # e.g. 10m, 30s, 1h, 90s, etc.
+  perPage: 10         # entries per page
+  maxPages: 10        # maximum number of pages

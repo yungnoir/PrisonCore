@@ -17,8 +17,6 @@ import net.minestom.server.MinecraftServer
 import net.minestom.server.entity.attribute.Attribute
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent
 import net.minestom.server.event.player.PlayerSpawnEvent
-import net.minestom.server.potion.Potion
-import net.minestom.server.potion.PotionEffect
 import revxrsal.commands.minestom.MinestomLamp
 import twizzy.tech.commands.*
 import twizzy.tech.game.Engine
@@ -34,10 +32,14 @@ import twizzy.tech.util.*
 import java.nio.file.Path
 
 var isServerLoaded = false
+var version = "0.21"
+var author = "TwizzyTech"
+lateinit var gameEngine: Engine
+lateinit var serverInstance: MinecraftServer
 
 suspend fun main() {
 
-    val server = MinecraftServer.init()
+    var server = MinecraftServer.init()
     val logger = MinecraftServer.LOGGER
 
 
@@ -67,17 +69,6 @@ suspend fun main() {
 
             val ranks = Ranks.getInstance()
             ranks.init()
-
-
-            println("[PrisonCore/main] MainThread 1 Thread:${Thread.currentThread().name}/${Thread.currentThread().id}")
-            delay(2000)
-            println("[PrisonCore/main] MainThread 2 Thread:${Thread.currentThread().name}/${Thread.currentThread().id}")
-
-            withContext(Dispatchers.IO) {
-                println("[PrisonCore/main] Simulating data load Thread:${Thread.currentThread().name}/${Thread.currentThread().id}")
-                Thread.sleep(500)
-            }
-            println("[PrisonCore/main] MainThread 3 Thread:${Thread.currentThread().name}/${Thread.currentThread().id}")
 
             // Mark server as loaded after all initialization is complete
             isServerLoaded = true
@@ -127,6 +118,9 @@ suspend fun main() {
     val mineManager = MineManager(worldsManager, server, regionManager)
     regionManager.setMineManager(mineManager)
 
+    gameEngine = Engine(server, regionManager, worldsManager)
+    serverInstance = server
+
     val instanceMap = InstanceMap(worldsManager, regionManager, mineManager)
     worldsManager.setInstanceMap(instanceMap)
 
@@ -155,10 +149,7 @@ suspend fun main() {
         MinestomPvP.setLegacyAttack(player, true)
 
         player.isAllowFlying = true
-        player.addEffect(Potion(PotionEffect.SPEED, 2, -1))
-        player.permissionLevel
 
-        player.addEffect(Potion(PotionEffect.HASTE, 1, -1))
         player.getAttribute(Attribute.MINING_EFFICIENCY).setBaseValue(100.0) // Set mining speed to 10
         player.getAttribute(Attribute.BLOCK_BREAK_SPEED).setBaseValue(10.0) // Set breaking speed to 10
         player.getAttribute(Attribute.FALL_DAMAGE_MULTIPLIER).setBaseValue(0.0) // Disable fall damage
@@ -173,6 +164,7 @@ suspend fun main() {
     val lamp = MinestomLamp.builder()
         .build()
 
+    lamp.register(Version())
     lamp.register(Shutdown())
     lamp.register(Gamemode())
     lamp.register(Clear())
@@ -187,19 +179,26 @@ suspend fun main() {
     lamp.register(Give())
     lamp.register(Withdraw())
     lamp.register(Pay())
+    lamp.register(Tokens())
+    lamp.register(Souls())
     lamp.register(Fix())
     lamp.register(Activity())
     lamp.register(Help())
+    lamp.register(Pickaxe())
+    lamp.register(Rename())
+    lamp.register(Backpack())
+    lamp.register(Rankup())
+    lamp.register(Leaderboard())
 
     MapInteractions(server, regionManager, worldsManager)
     ItemInteractions(server, regionManager, worldsManager)
 
     ConnectionHandler(server, instanceMap)
     ChatHandler(server)
-    Engine(server)
+
+    server.start("0.0.0.0", 25567)
 
     SignedVelocity.initialize()
-    server.start("0.0.0.0", 25567)
 
 
 

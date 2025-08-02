@@ -1,6 +1,8 @@
 package twizzy.tech.listeners
 
 import com.github.shynixn.mccoroutine.minestom.addSuspendingListener
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import net.kyori.adventure.key.Key
 import net.kyori.adventure.sound.Sound
 import net.kyori.adventure.text.Component
@@ -10,12 +12,24 @@ import net.minestom.server.entity.ItemEntity
 import net.minestom.server.entity.Player
 import net.minestom.server.event.EventFilter
 import net.minestom.server.event.EventNode
+import net.minestom.server.event.inventory.InventoryPreClickEvent
 import net.minestom.server.event.item.ItemDropEvent
 import net.minestom.server.event.item.PickupItemEvent
+import net.minestom.server.event.player.PlayerChangeHeldSlotEvent
+import net.minestom.server.event.player.PlayerHandAnimationEvent
+import net.minestom.server.event.player.PlayerSwapItemEvent
 import net.minestom.server.event.player.PlayerUseItemEvent
+import net.minestom.server.inventory.InventoryType
+import net.minestom.server.inventory.click.ClickType
 import net.minestom.server.item.ItemStack
+import net.minestom.server.listener.PlayerHeldListener
+import net.minestom.server.potion.Potion
+import net.minestom.server.potion.PotionEffect
 import twizzy.tech.game.RegionManager
+import twizzy.tech.game.Engine
 import twizzy.tech.game.items.notes.Money
+import twizzy.tech.game.items.pickaxe.Pickaxe
+import twizzy.tech.game.items.pickaxe.boosters.Experience
 import twizzy.tech.player.PlayerData
 import twizzy.tech.util.Worlds
 import java.math.BigDecimal
@@ -51,6 +65,66 @@ class ItemInteractions(private val minecraftServer: MinecraftServer, private val
 
             val player = event.livingEntity as Player
             player.inventory.addItemStack(itemStack)
+        }
+
+        // INVENTORY CLICK INTERACTIONS - Handle item-on-item interactions
+        MinecraftServer.getGlobalEventHandler().addListener(InventoryPreClickEvent::class.java) { event ->
+            val player = event.player
+            val clickedItem = event.clickedItem
+            val cursorItem = event.cursorItem
+
+            // Check if this is an item-on-item interaction (player has item on cursor and clicks another item)
+            if (!cursorItem.isAir && !clickedItem.isAir && event.clickType == ClickType.LEFT_CLICK) {
+                if (shouldHandleInteraction(cursorItem, clickedItem)) {
+                    event.isCancelled = true
+                    handleItemOnItemInteraction(player, cursorItem, clickedItem, event)
+                }
+            }
+        }
+
+        // ITEM DETECTION
+        MinecraftServer.getGlobalEventHandler().addSuspendingListener(minecraftServer, PlayerChangeHeldSlotEvent::class.java) { event ->
+
+            val player = event.player
+
+            val pickaxe = Pickaxe.fromItemStack(player.itemInMainHand)
+
+            if (pickaxe != null) {
+                // Sync player experience bar with pickaxe experience progress
+                player.exp = pickaxe.expProgress()
+                player.level = pickaxe.level
+
+                // Check for Speed enchant and apply speed effect
+                val speedEnchant = pickaxe.getEnchantByName("Speed")
+                if (speedEnchant != null) {
+                    // Remove existing speed effect if present
+                    player.removeEffect(PotionEffect.SPEED)
+                    // Apply speed effect with amplifier = enchant level - 1, duration -1 (infinite)
+                    player.addEffect(Potion(PotionEffect.SPEED, speedEnchant.level -1, -1))
+                } else {
+                    // Remove speed effect if not present on pickaxe
+                    player.removeEffect(PotionEffect.SPEED)
+                }
+
+                // Check for Speed enchant and apply speed effect
+                val hasteEnchant = pickaxe.getEnchantByName("Haste")
+                if (hasteEnchant != null) {
+                    // Remove existing speed effect if present
+                    player.removeEffect(PotionEffect.HASTE)
+                    // Apply speed effect with amplifier = enchant level - 1, duration -1 (infinite)
+                    player.addEffect(Potion(PotionEffect.HASTE, hasteEnchant.level -1, -1))
+                } else {
+                    // Remove speed effect if not present on pickaxe
+                    player.removeEffect(PotionEffect.HASTE)
+                }
+            } else {
+                // Reset player's XP and level when not holding a pickaxe
+                player.exp = 0.0f
+                player.level = 0
+                // Remove speed effect if not holding a pickaxe
+                player.removeEffect(PotionEffect.SPEED)
+            }
+
         }
 
 
@@ -115,5 +189,96 @@ class ItemInteractions(private val minecraftServer: MinecraftServer, private val
 
         // Register the event handler to the global event handler
         MinecraftServer.getGlobalEventHandler().addChild(playerNode)
+    }
+
+    /**
+     * Determines if we should handle this item-on-item interaction
+     */
+    private fun shouldHandleInteraction(cursorItem: ItemStack, targetItem: ItemStack): Boolean {
+        // Check if cursor item is an Experience booster and target is a pickaxe
+        val experienceBooster = Experience.fromItemStack(cursorItem)
+        if (experienceBooster != null) {
+            val pickaxe = Pickaxe.fromItemStack(targetItem)
+            if (pickaxe != null) {
+                return true
+            }
+        }
+
+        // Add more interaction type checks here
+        // Return true if any interaction should be handled
+
+        return false
+    }
+
+    /**
+     * Handles when a player clicks one item on another item in their inventory
+     * @param player The player performing the interaction
+     * @param cursorItem The item the player is holding/dragging
+     * @param targetItem The item being clicked on
+     * @param event The original inventory pre-click event
+     */
+    private fun handleItemOnItemInteraction(
+        player: Player,
+        cursorItem: ItemStack,
+        targetItem: ItemStack,
+        event: InventoryPreClickEvent
+    ) {
+        val experienceBooster = Experience.fromItemStack(cursorItem)
+        if (experienceBooster != null) {
+            val pickaxe = Pickaxe.fromItemStack(targetItem)
+            if (pickaxe != null) {
+                handleBoosterOnPickaxe(player, experienceBooster, pickaxe, event)
+                return
+            }
+        }
+
+        // Add more item-on-item interaction handlers here
+        // For example: enchant books on pickaxes, gems on weapons, etc.
+
+        // If no specific interaction was handled, you can either:
+        // 1. Allow the default behavior (don't cancel)
+        // 2. Cancel and show a message
+        // For now, we'll just log the interaction for debugging
+        println("[ItemInteraction] ${player.username} used ${cursorItem.material()} on ${targetItem.material()}")
+    }
+
+    /**
+     * Handles applying an experience booster to a pickaxe
+     */
+    private fun handleBoosterOnPickaxe(
+        player: Player,
+        booster: Experience,
+        pickaxe: Pickaxe,
+        event: InventoryPreClickEvent
+    ) {
+        if (!booster.isActive()) {
+            player.sendMessage(Component.text("§cThis experience booster has expired!", NamedTextColor.RED))
+            return
+        }
+        val updatedPickaxe = pickaxe.addBooster(booster)
+        val newCursorItem = if (event.cursorItem.amount() > 1) {
+            event.cursorItem.withAmount(event.cursorItem.amount() - 1)
+        } else {
+            ItemStack.AIR
+        }
+        event.inventory.setItemStack(event.slot, updatedPickaxe.toItemStack())
+        event.player.inventory.cursorItem = newCursorItem
+        val multiplierText = if (booster.multiplier == booster.multiplier.toInt().toDouble()) {
+            "${booster.multiplier.toInt()}x"
+        } else {
+            String.format("%.1fx", booster.multiplier)
+        }
+        val durationText = booster.getRemainingDuration()?.let { "${it}s" } ?: "Permanent"
+        player.sendMessage(
+            Component.text("§aSuccessfully applied §f${multiplierText} Experience Booster §a(${durationText}) §ato your pickaxe!")
+        )
+        player.playSound(
+            Sound.sound(
+                Key.key("minecraft:entity.experience_orb.pickup"),
+                Sound.Source.PLAYER,
+                1.0f,
+                1.5f
+            )
+        )
     }
 }

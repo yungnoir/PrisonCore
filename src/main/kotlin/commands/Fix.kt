@@ -20,8 +20,8 @@ class Fix {
     @Command("fixall")
     @Description("Repair all items in your inventory")
     @CommandPermission("command.fixall")
-    fun fixAll(actor: Player, @Optional target: Player?) {
-        val playerToFix = target ?: actor
+    fun fixAll(actor: Player, @Optional player: Player?) {
+        val playerToFix = player ?: actor
         val inventory = playerToFix.inventory
         var repairedCount = 0
 
@@ -85,12 +85,12 @@ class Fix {
         }
 
         // Send appropriate messages
-        if (target != null) {
+        if (player != null) {
             if (repairedCount > 0) {
-                actor.sendMessage("You have repaired $repairedCount items for ${target.username}.")
-                target.sendMessage("${actor.username} has repaired $repairedCount of your items.")
+                actor.sendMessage("You have repaired $repairedCount items for ${player.username}.")
+                player.sendMessage("${actor.username} has repaired $repairedCount of your items.")
             } else {
-                actor.sendMessage("${target.username} has no items that need repairing.")
+                actor.sendMessage("${player.username} has no items that need repairing.")
             }
         } else {
             if (repairedCount > 0) {

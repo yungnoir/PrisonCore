@@ -141,6 +141,8 @@ class InstanceMap(
             val pitch = (spawn["pitch"] as? Number)?.toFloat() ?: 0.0f
             playerSpawns[player.uuid] = Pos(x, y, z, yaw, pitch)
         }
+
+        mineManager.resetMine(player.uuid.toString(), "${player.uuid}_mine")
         return instance
     }
 

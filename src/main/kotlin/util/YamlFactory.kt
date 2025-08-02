@@ -29,7 +29,7 @@ class YamlFactory {
          * Initializes the language system by loading the lang.yaml file.
          * @param langFilePath The path to the language file (defaults to "src/main/resources/lang.yaml").
          */
-        fun initializeLanguage(langFilePath: String = "src/main/resources/lang.yaml") {
+        fun initializeLanguage(langFilePath: String = "lang.yaml") {
             languageFile = createConfigIfNotExists(langFilePath, "lang.yaml")
             reloadLanguage()
         }
@@ -84,7 +84,7 @@ class YamlFactory {
          * @param placeholders A map of placeholder names to their values.
          * @return The formatted message with color codes converted.
          */
-        private fun formatMessage(message: String, placeholders: Map<String, Any>): String {
+        fun formatMessage(message: String, placeholders: Map<String, Any>): String {
             var formatted = message
             // Replace placeholders
             for ((key, value) in placeholders) {

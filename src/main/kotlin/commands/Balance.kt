@@ -15,9 +15,9 @@ import java.util.*
 class Balance {
     @Command("balance", "bal")
     @Description("Check your or another player's balance")
-    suspend fun checkBalance(actor: Player, @Optional target: String) {
+    suspend fun checkBalance(actor: Player, @Optional player: String) {
         val numberFormat = NumberFormat.getInstance(Locale.US)
-        if (target.isNullOrBlank()) {
+        if (player.isNullOrBlank()) {
             val balance = PlayerData.getBalance(actor.username)
             val compact = CompactNotation.format(balance ?: 0.0)
             val full = balance?.let { numberFormat.format(it) } ?: "0"
@@ -30,7 +30,7 @@ class Balance {
                 .hoverEvent(HoverEvent.showText(Component.text("$${full}")))
             actor.sendMessage(component)
         } else {
-            val balance = PlayerData.getBalance(target)
+            val balance = PlayerData.getBalance(player)
             if (balance == null) {
                 val message = YamlFactory.getMessage("commands.balance.not_found")
                 actor.sendMessage(Component.text(message))
@@ -41,11 +41,17 @@ class Balance {
 
             val message = YamlFactory.getMessage(
                 "commands.balance.other",
-                mapOf("player" to target, "amount" to compact)
+                mapOf("player" to player, "amount" to compact)
             )
             val component = Component.text(message)
                 .hoverEvent(HoverEvent.showText(Component.text("$${full}")))
             actor.sendMessage(component)
         }
+    }
+
+    @Command("balance top", "baltop")
+    @Description("Show the top balances on the server")
+    suspend fun balanceTop(actor: Player, @Optional page: Int?) {
+        Leaderboard().printLeaderboard(actor, "Balance", page ?: 1)
     }
 }

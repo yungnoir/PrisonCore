@@ -10,20 +10,20 @@ import twizzy.tech.util.YamlFactory
 
 class Clear {
 
-    @Command("clear <target>")
+    @Command("clear <player>")
     @CommandPermission("command.clear")
     @Description("Clear your or another player's inventory")
-    fun clearInventory(actor: Player, @Optional target: Player?) {
-        if (target == null) {
+    fun clearInventory(actor: Player, @Optional player: Player?) {
+        if (player == null) {
             actor.inventory.clear()
             val message = YamlFactory.getMessage("commands.clear.success")
             actor.sendMessage(Component.text(message))
         } else {
-            target.inventory.clear()
+            player.inventory.clear()
 
             val actorMessage = YamlFactory.getMessage(
                 "commands.clear.success_other",
-                mapOf("target" to target.username)
+                mapOf("player" to player.username)
             )
             actor.sendMessage(Component.text(actorMessage))
 
@@ -31,7 +31,7 @@ class Clear {
                 "commands.clear.success_notify",
                 mapOf("player" to actor.username)
             )
-            target.sendMessage(Component.text(targetMessage))
+            player.sendMessage(Component.text(targetMessage))
         }
     }
 }

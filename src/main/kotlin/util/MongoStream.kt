@@ -210,6 +210,9 @@ class MongoStream private constructor() {
         return document ?: Document("_id", uuid.toString())
             .append("balance", 0.0)
             .append("blocksMined", 0)
+            .append("souls", 0.0) // Ensure souls is present
+            .append("tokens", 0.0) // Ensure tokens is present
+            .append("rank", 0)
     }
 
     /**

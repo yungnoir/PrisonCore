@@ -1,0 +1,15 @@
+scoreboard:
+  title: "&d&oMythic Prison"
+  header:
+    - "&7&m                         "
+
+  body:
+    - " &aBalance&f: $%balance%"
+    - " &bTokens&f: %tokens%"
+    - " &cSouls&f: %souls%"
+    - " &eBackpack&f: %backpack%"
+
+  footer:
+    - " "
+    - " &f&omythic.rip"
+    - "&7&m                         "

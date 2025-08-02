@@ -4,6 +4,8 @@ import net.kyori.adventure.text.Component
 import net.minestom.server.entity.Player
 import revxrsal.commands.annotation.Command
 import revxrsal.commands.annotation.Description
+import revxrsal.commands.annotation.Optional
+import revxrsal.commands.annotation.Usage
 import twizzy.tech.player.PlayerData
 import twizzy.tech.util.CompactNotation
 import twizzy.tech.util.YamlFactory
@@ -11,9 +13,14 @@ import java.math.BigDecimal
 
 class Pay {
 
-    @Command("pay <target> <amount>")
+    @Command("pay <player> <amount>")
     @Description("Transfer money to another player")
-    suspend fun pay(actor: Player, target: String, amount: String) {
+    suspend fun pay(actor: Player, @Optional player: String, @Optional amount: String) {
+        if (player.isNullOrBlank() || amount.isNullOrBlank()) {
+            val message = YamlFactory.getMessage("commands.pay.usage")
+            actor.sendMessage(Component.text(message))
+            return
+        }
         // Parse amount to BigDecimal, supporting compact notation
         val amountValue = try {
             val decimal = if (amount.matches(Regex("^[0-9]+(\\.[0-9]+)?[a-zA-Z]{0,2}$"))) {
@@ -58,13 +65,13 @@ class Pay {
             return
         }
 
-        // Get target player data
-        val targetData = PlayerData.findFromCache(target)
+        // Get player player data
+        val targetData = PlayerData.findFromCache(player)
 
         if (targetData == null) {
             val message = YamlFactory.getMessage(
                 "commands.pay.not_found",
-                mapOf("target" to target)
+                mapOf("player" to player)
             )
             actor.sendMessage(Component.text(message))
             return
@@ -84,12 +91,12 @@ class Pay {
         // Notify both players about the successful transaction
         val senderMessage = YamlFactory.getMessage(
             "commands.pay.success",
-            mapOf("amount" to CompactNotation.format(amountValue), "target" to target)
+            mapOf("amount" to CompactNotation.format(amountValue), "player" to player)
         )
         actor.sendMessage(Component.text(senderMessage))
 
         // Try to notify the target player if they're online
-        val targetPlayer = actor.instance?.players?.find { it.username.equals(target, ignoreCase = true) }
+        val targetPlayer = actor.instance?.players?.find { it.username.equals(player, ignoreCase = true) }
         targetPlayer?.let {
             val receivedMessage = YamlFactory.getMessage(
                 "commands.pay.received",

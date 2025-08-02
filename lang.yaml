@@ -148,6 +148,7 @@ commands:
       cannot_place: "&cYou cannot place blocks in this region."
 
   gamemode:
+    usage: "&eUsage: /gamemode <mode>"
     help:
       header: "&6Gamemode Commands:"
       usage:
@@ -163,10 +164,10 @@ commands:
       header: "&6Clear Commands:"
       usage:
         - "&e/clear &7- Clear your inventory"
-        - "&e/clear <target> &7- Clear another player's inventory"
+        - "&e/clear <player> &7- Clear another player's inventory"
 
     success: "&aYour inventory has been cleared."
-    success_other: "&a{target}'s inventory has been cleared."
+    success_other: "&a{player}'s inventory has been cleared."
     success_notify: "&aYour inventory has been cleared by &e{player}&a."
 
   economy:
@@ -194,37 +195,52 @@ commands:
     non_negative: "&cAmount cannot be negative."
 
   balance:
-    help:
-      header: "&6Balance Commands:"
-      usage:
-        - "&e/balance &7- Check your balance"
-        - "&e/bal &7- Check your balance (alias)"
-        - "&e/balance <player> &7- Check another player's balance"
-
     own: "&eBalance: &a${amount}"
     other: "&e{player}'s Balance: &a${amount}"
     not_found: "&cPlayer not found or has no balance."
 
+  tokens:
+    help:
+      header: "&6Token Commands:"
+      usage:
+        - "&e/tokens balance [player] &7- Check yours or another player's souls balance"
+        - "&e/tokens pay <player> &7- Give souls to another player"
+
+    pay-usage: "&eUsage: /tokens pay <player> <amount>"
+    own: "&eTokens: &a{amount}"
+    other: "&e{player}'s Tokens: &a{amount}"
+    not_found: "&cPlayer not found or has no tokens."
+
+  souls:
+    help:
+      header: "&6Soul Commands:"
+      usage:
+        - "&e/souls balance [player] &7- Check yours or another player's souls balance"
+        - "&e/souls pay <player> &7- Give souls to another player"
+    pay-usage: "&eUsage: /souls pay <player> <amount>"
+
+    own: "&eSouls: &a{amount}"
+    other: "&e{player}'s Souls: &a{amount}"
+    not_found: "&cPlayer not found or has no souls."
+
   pay:
+    usage: "&eUsage: /pay <player> <amount>"
     help:
       header: "&6Pay Commands:"
       usage:
-        - "&e/pay <target> <amount> &7- Send money to another player"
+        - "&e/pay <player> <amount> &7- Send money to another player"
 
-    success: "&aYou sent &f{amount} &ato &e{target}&a."
+    success: "&aYou sent &f{amount} &ato &e{player}&a."
     received: "&aYou received &f{amount} &afrom &e{sender}&a."
     insufficient: "&cYou don't have enough balance to transfer {amount}."
     invalid_amount: "&cInvalid amount: {amount}"
     positive_only: "&cAmount must be greater than 0."
-    not_found: "&cPlayer '{target}' not found or hasn't played before."
+    not_found: "&cPlayer '{player}' not found or hasn't played before."
     self_pay: "&cYou cannot pay yourself."
     data_error: "&cFailed to retrieve your player data."
 
   withdraw:
-    help:
-      header: "&6Withdraw Commands:"
-      usage:
-        - "&e/withdraw <amount> &7- Withdraw money as a physical note"
+    usage: "&eUsage: /withdraw <amount>"
 
     success: "&aSuccessfully withdrew &f${amount}&a."
     insufficient: "&cYou don't have enough money. Your balance: &f${balance}&c."
@@ -289,6 +305,45 @@ commands:
       block_entry: "&f  - {block}"
       no_blocks: "&f  - None (using STONE as default)"
       instructions: "&bTo change the blocks, place them in your hotbar and use /mines setblocks"
+
+  pickaxe:
+    levelup:
+      chat: "&6&l✦ &eCongratulations! &6Your pickaxe has reached level &f{level}&6!"
+      title: "&6&lLEVEL UP!"
+      subtitle: "&eYour pickaxe is now level &f{level}"
+      sound: "minecraft:entity.player.levelup"
+
+    enchants:
+      activate: " &d&l❂ &5{enchant} &fenchant has destroyed &7{blocks} &fblocks!"
+      added: "&a&l✓ &7Added &d{enchant} &7level &f{level} &7to your pickaxe for &e{amount} &6{currency}&7!"
+      upgraded: "&a&l✓ &7Upgraded &d{enchant} &7to level &f{level} &7for &e{amount} &6{currency}&7!"
+      max_level: "&c&l✗ &7This enchant is already at maximum level!"
+      insufficient_funds: "&c&l✗ &7You don't have enough {currency}! Required: &e{amount}"
+      insufficient_pickaxe_level: "&c&l✗ &7Your pickaxe level (&f{current}&7) is too low! Required: &f{required}"
+
+  rename:
+    usage: "&eUsage: /rename <new_name>"
+    success: "&aYour pickaxe has been renamed to &f{new_name}&a."
+
+
+  leaderboard:
+    usage: "&eUsage: /leaderboard <type> [page]"
+    no_data: "&cNo data found for this page."
+
+    colors:
+      - "&6" # Rank #1
+      - "&e" # Rank #2
+      - "&7" # Rank #3
+      - "&f" # Default color for others (ex: #4, #5, etc.)
+
+    entry: "{color}#{rank} &f{name}: &a{compact} &7(&f{full}&7)"
+
+    list:
+      - "&6=== {type} Top (Page {page}) &6==="
+      - "{entry}"
+      - " "
+      - "&7(Next refresh: {refresh})"
+      - "---------------------------------------"
 
 # Common messages
 common:

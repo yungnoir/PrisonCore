@@ -3,10 +3,12 @@ package twizzy.tech.listeners
 import com.github.shynixn.mccoroutine.minestom.addSuspendingListener
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.format.TextDecoration
 import net.minestom.server.MinecraftServer
 import net.minestom.server.entity.Player
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent
 import net.minestom.server.event.player.PlayerDisconnectEvent
+import net.minestom.server.event.player.PlayerLoadedEvent
 import net.minestom.server.item.ItemStack
 import net.minestom.server.item.Material
 import twizzy.tech.isServerLoaded
@@ -14,6 +16,7 @@ import twizzy.tech.player.PlayerData
 import twizzy.tech.util.InstanceMap
 import twizzy.tech.util.LettuceCache
 import twizzy.tech.util.MongoStream
+import twizzy.tech.gameEngine
 import java.util.*
 
 class ConnectionHandler(minecraftServer: MinecraftServer, instanceMap: InstanceMap) {
@@ -54,11 +57,63 @@ class ConnectionHandler(minecraftServer: MinecraftServer, instanceMap: InstanceM
             }
         }
 
+        MinecraftServer.getGlobalEventHandler().addSuspendingListener(minecraftServer, PlayerLoadedEvent::class.java) { event ->
+            val player = event.player
+
+            // Get scoreboard title from config
+            val scoreboardConfig = try {
+                twizzy.tech.util.YamlFactory.loadConfig(java.io.File("game/scoreboard.yml"))
+            } catch (e: Exception) {
+                null
+            }
+
+            val titleText = scoreboardConfig?.let { config ->
+                val scoreboard = config["scoreboard"] as? Map<*, *>
+                val title = scoreboard?.get("title") as? String
+                title?.replace("&", "§") ?: "Mythic Prison"
+            } ?: "Mythic Prison"
+
+            // Create a sidebar for the player with config title
+            val sidebarTitle = Component.text(titleText, NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD)
+            val sidebar = twizzy.tech.util.ComponentSidebar(sidebarTitle)
+            sidebar.addViewer(player)
+
+            // Store the sidebar for this player
+            twizzy.tech.util.ComponentSidebar.setSidebar(player, sidebar)
+
+            // Get player data and update using config
+            val playerData = PlayerData.getFromCache(player.uuid)
+            if (playerData != null) {
+                sidebar.updateFromConfig(playerData)
+            } else {
+                // Fallback if player data isn't loaded yet - use config or defaults
+                try {
+                    val fallbackData = PlayerData(player.uuid)
+                    sidebar.updateFromConfig(fallbackData)
+                } catch (e: Exception) {
+                    // Ultimate fallback to hardcoded values
+                    sidebar.update(
+                        Component.text("Balance: $0", NamedTextColor.GREEN),
+                        Component.text("Tokens: 0", NamedTextColor.GOLD),
+                        Component.text("Souls: 0", NamedTextColor.LIGHT_PURPLE),
+                        Component.text("Backpack: 0", NamedTextColor.AQUA)
+                    )
+                }
+            }
+        }
+
+
         MinecraftServer.getGlobalEventHandler().addSuspendingListener(minecraftServer, PlayerDisconnectEvent::class.java) { event ->
             if (!isServerLoaded) {
                 return@addSuspendingListener
             }
             val player = event.player
+
+            // Clean up the batching system for this player
+            gameEngine.cleanupPlayerBatching(player.uuid)
+
+            // Remove sidebar for this player
+            twizzy.tech.util.ComponentSidebar.removeSidebar(player)
 
             // Save inventory to YAML
             PlayerData.saveInventory(player.uuid, player.inventory)
